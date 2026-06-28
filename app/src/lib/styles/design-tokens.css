@@ -1,0 +1,177 @@
+/* ============================================================
+   CATERING CRM — Design Tokens v2 ("Dispatch Kitchen")
+   Tailwind v4 @theme — generates utility classes automatically.
+   bg-ink, text-signal, font-display, shadow-card etc.
+   ============================================================ */
+
+@theme {
+  /* ---- Typography ---- */
+  --font-display: 'Golos Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body:    'Golos Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  /* ---- Palette: Core ---- */
+  --color-ink:            #1a1d23;
+  --color-steel:          #e4e6ea;
+  --color-paper:          #fafaf8;
+  --color-signal:         #e8852c;
+  --color-signal-strong:  #c96e1c;
+  --color-mint:           #2d8a6e;
+  --color-alert:          #d9483b;
+
+  /* ---- Palette: Neutrals (stepped) ---- */
+  --color-neutral-50:     #f8f9fa;
+  --color-neutral-100:    #f0f1f3;
+  --color-neutral-200:    #e4e6ea;
+  --color-neutral-300:    #cdd0d5;
+  --color-neutral-400:    #9ca0a8;
+  --color-neutral-500:    #6b7078;
+  --color-neutral-600:    #4a4e55;
+  --color-neutral-700:    #353840;
+  --color-neutral-800:    #24272d;
+  --color-neutral-900:    #1a1d23;
+
+  /* ---- Semantic: Status temperature (column top-border) ---- */
+  --color-temp-draft:      #a0a5ae; /* cold gray     */
+  --color-temp-review:     #7b8c9e; /* cool blue      */
+  --color-temp-confirmed:  #5b7f95; /* teal           */
+  --color-temp-inprogress: #e8852c; /* warm amber     */
+  --color-temp-dispatch:   #d96c3a; /* hot orange     */
+  --color-temp-done:       #2d8a6e; /* mint           */
+  --color-temp-cancelled:  #9ca0a8; /* muted          */
+
+  /* ---- Format tag colors ---- */
+  --color-format-banquet:    #7c3aed;
+  --color-format-buffet:     #2563eb;
+  --color-format-coffee:     #ca8a04;
+  --color-format-cocktail:   #db2777;
+  --color-format-furshet:    #2563eb;
+  --color-format-default:    #6b7078;
+
+  /* ---- Shadows ---- */
+  --shadow-card:       0 1px 3px rgba(26, 29, 35, 0.06), 0 1px 2px rgba(26, 29, 35, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(26, 29, 35, 0.08), 0 2px 4px rgba(26, 29, 35, 0.04);
+  --shadow-column:     0 0 0 1px rgba(26, 29, 35, 0.04);
+
+  /* ---- Radii ---- */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* ---- Transitions ---- */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- Base layer ---- */
+@layer base {
+  html {
+    font-family: var(--font-body);
+    color: var(--color-ink);
+    background-color: var(--color-neutral-50);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ---- Utility: format accent bar on kanban cards ---- */
+.format-dot {
+  width: 4px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  flex-shrink: 0;
+}
+
+/* ---- Column temperature: top-border color by status index ---- */
+.col-temp-draft      { border-top: 3px solid var(--color-temp-draft); }
+.col-temp-review     { border-top: 3px solid var(--color-temp-review); }
+.col-temp-confirmed  { border-top: 3px solid var(--color-temp-confirmed); }
+.col-temp-inprogress { border-top: 3px solid var(--color-temp-inprogress); }
+.col-temp-dispatch   { border-top: 3px solid var(--color-temp-dispatch); }
+.col-temp-done       { border-top: 3px solid var(--color-temp-done); }
+.col-temp-cancelled  { border-top: 3px solid var(--color-temp-cancelled); }
+
+/* ---- Spacing ---- */
+:root {
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+}
+
+/* ---- Transitions ---- */
+:root {
+  --transition-fast:   150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow:   300ms ease;
+}
+
+/* ---- Z-Index ---- */
+:root {
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-modal:    300;
+  --z-toast:    400;
+}
+
+/* ---- G18: Dark mode ---- */
+html.dark {
+  --color-ink:            #e8eaed;
+  --color-steel:          #353840;
+  --color-paper:          #2a2e36;
+  --color-signal:         #f0a050;
+  --color-signal-strong:  #e8852c;
+  --color-mint:           #4aad8c;
+  --color-alert:          #f06050;
+
+  --color-neutral-50:     #15181d;
+  --color-neutral-100:    #1a1d23;
+  --color-neutral-200:    #24272d;
+  --color-neutral-300:    #353840;
+  --color-neutral-400:    #6b7078;
+  --color-neutral-500:    #9ca0a8;
+  --color-neutral-600:    #cdd0d5;
+  --color-neutral-700:    #e4e6ea;
+  --color-neutral-800:    #f0f1f3;
+  --color-neutral-900:    #f8f9fa;
+
+  --color-temp-draft:      #6b7078;
+  --color-temp-review:     #7b8c9e;
+  --color-temp-confirmed:  #5b7f95;
+  --color-temp-done:       #4aad8c;
+  --color-temp-cancelled:  #6b7078;
+
+  --shadow-card:       0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 4px 14px rgba(0, 0, 0, 0.5);
+  --shadow-column:     0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+html.dark body {
+  background-color: #15181d;
+}
+
+/* Dark mode: kanban card borders for contrast */
+html.dark .kanban-card {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+html.dark .kanban-col {
+  background-color: #1a1d23;
+}

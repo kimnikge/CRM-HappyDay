@@ -1,0 +1,8 @@
+/* ---- Google Fonts ---- */
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ---- Tailwind v4 ---- */
+@import 'tailwindcss';
+
+/* ---- Design tokens (generates bg-ink, text-signal, font-display, etc.) ---- */
+@import '$lib/styles/design-tokens.css';
