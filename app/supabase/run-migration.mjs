@@ -31,7 +31,7 @@ function loadEnv() {
 loadEnv();
 
 // ---- Config ----
-const PROJECT_REF = 'hpbpmjrwpxhctxjogyyy';
+const PROJECT_REF = 'jioeuhpqhvszkjteyveh';
 const DB_PASSWORD = process.argv[2] || process.env.SUPABASE_DB_PASSWORD || null;
 const TARGET = process.argv[3] || process.argv[2] || null; // arg can be migration number
 
