@@ -21,14 +21,16 @@
   --color-ink:            #1a1d23;
   --color-steel:          #e4e6ea;
   --color-paper:          #fafaf8;
+  --color-parchment:      #faf7f2;  /* warm off-white — butcher paper */
+  --color-chalk:          #f4f1eb;  /* secondary surface — softer than parchment */
   --color-signal:         #e8852c;
   --color-signal-strong:  #c96e1c;
   --color-mint:           #2d8a6e;
   --color-alert:          #d9483b;
 
   /* ---- Palette: Neutrals (stepped) ---- */
-  --color-neutral-50:     #f8f9fa;
-  --color-neutral-100:    #f0f1f3;
+  --color-neutral-50:     #faf7f2;
+  --color-neutral-100:    #f4f1eb;
   --color-neutral-200:    #e4e6ea;
   --color-neutral-300:    #cdd0d5;
   --color-neutral-400:    #9ca0a8;

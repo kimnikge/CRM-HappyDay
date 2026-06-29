@@ -8,6 +8,7 @@
     import FormField from "$lib/components/form/FormField.svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import { updateOrderSchema, validateFile } from "$lib/schemas";
+    import { generateOrderPDF } from "$lib/pdf/generate-order-pdf";
     import {
         FORMATS,
         EVENT_LEVELS,
@@ -34,6 +35,7 @@
     let showCancelReason = $state(false);
     let cancelReason = $state("");
     let pendingStatusId = $state<string | null>(null);
+    let sendingPDF = $state(false);
 
     const id = $derived($page.params.id);
 
@@ -214,6 +216,56 @@
         window.open(`https://wa.me/${digits}`, "_blank");
     }
 
+    async function sendPDFToWhatsApp() {
+        if (!order?.phone || sendingPDF) return;
+        sendingPDF = true;
+        error = "";
+
+        try {
+            // 1. Generate PDF blob
+            const pdfBlob = generateOrderPDF(order);
+            const fileName = `Заказ_${order.order_number}_${order.company_name.replace(/[^a-zA-Zа-яА-Я0-9]/g, "_")}.pdf`;
+            const file = new File([pdfBlob], fileName, {
+                type: "application/pdf",
+            });
+
+            // 2. Upload to Supabase Storage via existing API
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("order_id", order.id);
+
+            const res = await fetch("/api/files", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || "Ошибка загрузки PDF");
+            }
+
+            const uploaded = await res.json();
+
+            // 3. Get public URL from the uploaded file path
+            const {
+                data: { publicUrl },
+            } = supabase.storage
+                .from("order-files")
+                .getPublicUrl(uploaded.file_path);
+
+            // 4. Open WhatsApp with the PDF link
+            const clean = order.phone.replace(/[^\d+]/g, "");
+            const digits = clean.startsWith("+") ? clean.slice(1) : clean;
+            const message = encodeURIComponent(
+                `Здравствуйте! Ваш заказ №${order.order_number} — ${order.company_name}\n\nPDF заказа: ${publicUrl}`,
+            );
+            window.open(`https://wa.me/${digits}?text=${message}`, "_blank");
+        } catch (err: any) {
+            error = err.message || "Не удалось отправить PDF";
+        }
+        sendingPDF = false;
+    }
+
     // G5: Duplicate order
     async function duplicateOrder() {
         if (!order) return;
@@ -299,6 +351,32 @@
         return `${(bytes / 1024).toFixed(1)} KB`;
     }
 
+    /** Map format name to accent bar background class */
+    function getFormatAccent(fmt: string): string {
+        const map: Record<string, string> = {
+            банкет: "bg-format-banquet",
+            фуршет: "bg-format-furshet",
+            "кофе-брейк": "bg-format-coffee",
+            коктейль: "bg-format-cocktail",
+            буфет: "bg-format-buffet",
+        };
+        return map[fmt.toLowerCase()] ?? "bg-format-default";
+    }
+
+    /** Map status order_index to temperature class for the status pill */
+    function statusTempClass(idx: number): string {
+        const map: Record<number, string> = {
+            0: "bg-neutral-200 text-neutral-600",
+            1: "bg-blue-100 text-blue-700",
+            2: "bg-teal-100 text-teal-700",
+            3: "bg-signal/15 text-signal",
+            4: "bg-orange-100 text-orange-700",
+            5: "bg-mint/15 text-mint",
+            6: "bg-neutral-200 text-neutral-500",
+        };
+        return map[idx] ?? "bg-neutral-200 text-neutral-600";
+    }
+
     onMount(load);
 </script>
 
@@ -306,6 +384,40 @@
     <Header />
 
     {#if order}
+        <!-- Snippets -->
+        {#snippet statusPill()}
+            {@const currentStatus = statuses.find(
+                (s) => s.id === order.status_id,
+            )}
+            {@const idx = currentStatus?.order_index ?? 0}
+            <div class="flex items-center gap-1.5">
+                <span
+                    class={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusTempClass(idx)}`}
+                >
+                    <span
+                        class={`inline-block h-1.5 w-1.5 rounded-full ${idx === 3 || idx === 4 ? "bg-signal animate-pulse" : "bg-current opacity-40"}`}
+                        aria-hidden="true"
+                    ></span>
+                    {currentStatus?.name ?? "—"}
+                </span>
+                <select
+                    value={order.status_id}
+                    onchange={(e) =>
+                        changeStatus((e.target as HTMLSelectElement).value)}
+                    class="rounded-md border border-neutral-300 px-2 py-1 text-xs font-body
+                           focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink
+                           hover:border-neutral-400 transition-colors duration-150 bg-paper"
+                    aria-label="Изменить статус заказа"
+                >
+                    {#each statuses as s}
+                        <option value={s.id} selected={s.id === order.status_id}
+                            >{s.name}</option
+                        >
+                    {/each}
+                </select>
+            </div>
+        {/snippet}
+
         <div class="mx-auto max-w-4xl px-3 sm:px-6 py-4 sm:py-6">
             <button
                 onclick={() => goto("/")}
@@ -315,64 +427,72 @@
             </button>
             <!-- Header -->
             <div
-                class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                class="mb-4 sm:mb-6 rounded-lg bg-paper shadow-card border border-neutral-200/60 overflow-hidden"
             >
-                <div>
-                    <h2
-                        class="text-lg sm:text-xl font-display font-semibold text-ink"
+                <!-- Format accent bar -->
+                <div
+                    class={`h-1 w-full ${order.format ? getFormatAccent(order.format) : "bg-neutral-300"}`}
+                    aria-hidden="true"
+                ></div>
+                <div class="p-3 sm:p-4">
+                    <div
+                        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                     >
-                        Заказ №{order.order_number}
-                    </h2>
-                    <p class="text-sm text-neutral-500">{order.company_name}</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <!-- G1: Form link + WhatsApp -->
-                    <div class="flex flex-wrap items-center gap-1.5">
-                        {#if order.form_token}
-                            {#if order.form_submitted}
-                                <span
-                                    class="text-xs text-neutral-400 bg-neutral-100 rounded px-2 py-1"
-                                >
-                                    Заполнена ✓
-                                </span>
-                            {:else}
-                                <button
-                                    class="text-xs text-signal hover:underline bg-signal/5 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150"
-                                    onclick={copyFormLink}
-                                    title="Скопировать ссылку на форму"
-                                >
-                                    {formLinkCopied
-                                        ? "Скопировано ✓"
-                                        : "📋 Форма"}
-                                </button>
-                            {/if}
-                        {/if}
-                        {#if order.phone}
-                            <button
-                                class="text-xs text-green-600 hover:underline bg-green-50 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150"
-                                onclick={openWhatsApp}
-                                title="Написать в WhatsApp"
+                        <div>
+                            <h2
+                                class="text-lg sm:text-xl font-display font-semibold text-ink"
                             >
-                                💬 WA
-                            </button>
-                        {/if}
+                                Заказ №{order.order_number}
+                            </h2>
+                            <p class="text-sm text-neutral-500">
+                                {order.company_name}
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Status pill -->
+                            {@render statusPill()}
+                            <!-- G1: Form link + WhatsApp -->
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                {#if order.form_token}
+                                    {#if order.form_submitted}
+                                        <span
+                                            class="text-xs text-mint bg-mint/10 rounded px-2 py-1 inline-flex items-center gap-1"
+                                        >
+                                            <span class="text-[10px]">✓</span>
+                                            Заполнена
+                                        </span>
+                                    {:else}
+                                        <button
+                                            class="text-xs text-signal hover:underline bg-signal/8 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150"
+                                            onclick={copyFormLink}
+                                            title="Скопировать ссылку на форму"
+                                        >
+                                            {formLinkCopied
+                                                ? "Скопировано ✓"
+                                                : "📋 Форма"}
+                                        </button>
+                                    {/if}
+                                {/if}
+                                {#if order.phone}
+                                    <button
+                                        class="text-xs text-green-600 hover:underline bg-green-50 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150"
+                                        onclick={openWhatsApp}
+                                        title="Написать в WhatsApp"
+                                    >
+                                        💬 WA
+                                    </button>
+                                    <button
+                                        class="text-xs text-ink hover:underline bg-neutral-100 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150 disabled:opacity-40"
+                                        onclick={sendPDFToWhatsApp}
+                                        disabled={sendingPDF}
+                                        title="Отправить PDF заказа в WhatsApp"
+                                    >
+                                        {sendingPDF ? "⏳" : "📄"} PDF
+                                    </button>
+                                {/if}
+                            </div>
+                        </div>
                     </div>
-                    <select
-                        value={order.status_id}
-                        onchange={(e) =>
-                            changeStatus((e.target as HTMLSelectElement).value)}
-                        class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body
-                               focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink
-                               hover:border-neutral-400 transition-colors duration-150"
-                    >
-                        {#each statuses as s}
-                            <option
-                                value={s.id}
-                                selected={s.id === order.status_id}
-                                >{s.name}</option
-                            >
-                        {/each}
-                    </select>
                 </div>
             </div>
 
@@ -445,8 +565,8 @@
             {/if}
 
             <div class="space-y-6">
-                <!-- 1. Client & Contacts -->
-                <FormSection title="1. Клиент и контакты">
+                <!-- Client & Contacts -->
+                <FormSection title="Клиент и контакты" accent="ink">
                     <FormField
                         label="Название компании / ФИО"
                         bind:value={order.company_name}
@@ -467,8 +587,12 @@
                     />
                 </FormSection>
 
-                <!-- 2. Core Parameters -->
-                <FormSection title="2. Основные параметры" cols={3}>
+                <!-- Core Parameters -->
+                <FormSection
+                    title="Основные параметры"
+                    cols={3}
+                    accent="signal"
+                >
                     <FormField
                         label="Дата мероприятия"
                         type="date"
@@ -511,8 +635,8 @@
                     />
                 </FormSection>
 
-                <!-- 3. Time -->
-                <FormSection title="3. Время" cols={3}>
+                <!-- Time -->
+                <FormSection title="Время" cols={3} accent="signal">
                     <FormField
                         label="Начало мероприятия"
                         type="time"
@@ -535,8 +659,8 @@
                     />
                 </FormSection>
 
-                <!-- 4. Location -->
-                <FormSection title="4. Локация/ссылка 2ГИС">
+                <!-- Location -->
+                <FormSection title="Локация" accent="steel">
                     <FormField label="Адрес" bind:value={order.address} cols />
                     <FormField
                         label="Пропускная система"
@@ -556,8 +680,8 @@
                     />
                 </FormSection>
 
-                <!-- 5. Equipment -->
-                <FormSection title="5. Оборудование">
+                <!-- Equipment -->
+                <FormSection title="Оборудование" accent="steel">
                     <FormField
                         label="Коктельные столы: количество"
                         type="number"
@@ -608,8 +732,12 @@
                     />
                 </FormSection>
 
-                <!-- 6. Event Level -->
-                <FormSection title="6. Уровень мероприятия" cols={1}>
+                <!-- Event Level -->
+                <FormSection
+                    title="Уровень мероприятия"
+                    cols={1}
+                    accent="signal"
+                >
                     <FormField
                         label="Уровень"
                         type="select"
@@ -618,8 +746,8 @@
                     />
                 </FormSection>
 
-                <!-- 7. Menu -->
-                <FormSection title="7. Меню">
+                <!-- Menu -->
+                <FormSection title="Меню" accent="mint">
                     <div class="col-span-2">
                         <label
                             for="menu-file-upload"
@@ -687,8 +815,8 @@
                     </div>
                 </FormSection>
 
-                <!-- 8. Beverages -->
-                <FormSection title="8. Напитки">
+                <!-- Beverages -->
+                <FormSection title="Напитки" accent="mint">
                     <FormField
                         label="Алкоголь"
                         bind:value={order.alcohol}
@@ -726,8 +854,8 @@
                     />
                 </FormSection>
 
-                <!-- 9. Other -->
-                <FormSection title="9. Прочее">
+                <!-- Other -->
+                <FormSection title="Прочее" accent="mint">
                     <FormField
                         label="Горячее"
                         bind:value={order.hot_dishes}
@@ -748,8 +876,8 @@
                     />
                 </FormSection>
 
-                <!-- 10. Finance -->
-                <FormSection title="10. Финансы">
+                <!-- Finance -->
+                <FormSection title="Финансы" accent="mint">
                     <FormField
                         label="Общая стоимость (тг)"
                         type="number"
@@ -809,40 +937,92 @@
                     />
                 </FormSection>
 
-                <!-- 11. History -->
+                <!-- History: visual timeline -->
                 <section
-                    class="rounded-md bg-paper p-5 shadow-card border border-neutral-200/60"
+                    class="rounded-lg bg-paper shadow-card border border-neutral-200/60 overflow-hidden"
                 >
-                    <h3
-                        class="mb-3 text-sm font-display font-semibold text-ink"
-                    >
-                        11. История статусов
-                    </h3>
-                    {#if history.length > 0}
-                        <div class="space-y-1.5">
-                            {#each history as h}
+                    <div class="p-4 sm:p-5">
+                        <h3
+                            class="mb-4 text-sm font-display font-semibold text-ink tracking-tight"
+                        >
+                            История статусов
+                        </h3>
+                        {#if history.length > 0}
+                            <div class="relative">
+                                <!-- Timeline vertical line -->
                                 <div
-                                    class="flex items-center gap-2 text-xs text-neutral-500"
-                                >
-                                    <span class="text-neutral-400 font-mono">
-                                        {new Date(h.changed_at).toLocaleString(
-                                            "ru-RU",
+                                    class="absolute left-2 top-1 bottom-1 w-px bg-neutral-200"
+                                    aria-hidden="true"
+                                ></div>
+                                <div class="space-y-3">
+                                    {#each history as h, i}
+                                        {@const hStatus = statuses.find(
+                                            (s) => s.id === h.new_status_id,
                                         )}
-                                    </span>
-                                    <span class="font-medium text-neutral-700"
-                                        >→ {h.statuses?.name || "?"}</span
-                                    >
-                                    {#if h.profiles?.full_name}
-                                        <span class="text-neutral-400"
-                                            >({h.profiles.full_name})</span
-                                        >
-                                    {/if}
+                                        {@const hIdx =
+                                            hStatus?.order_index ?? -1}
+                                        <div class="flex gap-3 relative">
+                                            <!-- Timeline dot -->
+                                            <div
+                                                class={`relative z-10 mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-paper ${hIdx >= 0 ? statusTempClass(hIdx).split(" ")[0] : "bg-neutral-300"} ${i === 0 ? "ring-2 ring-signal/20" : ""}`}
+                                                aria-hidden="true"
+                                            >
+                                                {#if i === 0}
+                                                    <span
+                                                        class="size-1 rounded-full bg-paper"
+                                                    ></span>
+                                                {/if}
+                                            </div>
+                                            <!-- Content -->
+                                            <div class="flex-1 min-w-0">
+                                                <div
+                                                    class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
+                                                >
+                                                    <span
+                                                        class="text-xs font-medium text-ink"
+                                                    >
+                                                        → {h.statuses?.name ??
+                                                            "?"}
+                                                    </span>
+                                                    {#if h.profiles?.full_name}
+                                                        <span
+                                                            class="text-xs text-neutral-400"
+                                                        >
+                                                            {h.profiles
+                                                                .full_name}
+                                                        </span>
+                                                    {/if}
+                                                </div>
+                                                <p
+                                                    class="text-2xs text-neutral-400 font-mono mt-0.5"
+                                                >
+                                                    {new Date(
+                                                        h.changed_at,
+                                                    ).toLocaleString("ru-RU", {
+                                                        day: "numeric",
+                                                        month: "short",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                </p>
+                                                {#if h.comment}
+                                                    <p
+                                                        class="text-xs text-neutral-500 mt-1 italic"
+                                                    >
+                                                        {h.comment}
+                                                    </p>
+                                                {/if}
+                                            </div>
+                                        </div>
+                                    {/each}
                                 </div>
-                            {/each}
-                        </div>
-                    {:else}
-                        <p class="text-xs text-neutral-400">Нет записей</p>
-                    {/if}
+                            </div>
+                        {:else}
+                            <p class="text-xs text-neutral-400">
+                                История изменений статуса появится здесь
+                            </p>
+                        {/if}
+                    </div>
                 </section>
             </div>
 

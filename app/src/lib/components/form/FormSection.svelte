@@ -4,10 +4,12 @@
     let {
         title,
         cols = 2,
+        accent = "" as "" | "signal" | "mint" | "steel" | "ink",
         children,
     }: {
         title: string;
         cols?: number;
+        accent?: "" | "signal" | "mint" | "steel" | "ink";
         children: Snippet;
     } = $props();
 
@@ -19,17 +21,34 @@
               ? "grid-cols-1 sm:grid-cols-2"
               : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
     );
+
+    const accentBar = $derived(
+        accent === "signal"
+            ? "bg-signal"
+            : accent === "mint"
+              ? "bg-mint"
+              : accent === "steel"
+                ? "bg-neutral-400"
+                : accent === "ink"
+                  ? "bg-ink"
+                  : "",
+    );
 </script>
 
 <section
-    class="rounded-md bg-paper p-4 sm:p-6 shadow-card border border-neutral-200/60"
+    class="rounded-lg bg-paper shadow-card border border-neutral-200/60 overflow-hidden"
 >
-    <h2
-        class="mb-3 sm:mb-4 text-sm sm:text-base font-display font-semibold text-ink"
-    >
-        {title}
-    </h2>
-    <div class="grid gap-3 sm:gap-4 {gridClass}">
-        {@render children()}
+    {#if accentBar}
+        <div class={`h-1 w-full ${accentBar}`} aria-hidden="true"></div>
+    {/if}
+    <div class="p-4 sm:p-5 {accentBar ? '' : ''}">
+        <h2
+            class="mb-3 sm:mb-4 text-sm sm:text-base font-display font-semibold text-ink tracking-tight"
+        >
+            {title}
+        </h2>
+        <div class="grid gap-3 sm:gap-4 {gridClass}">
+            {@render children()}
+        </div>
     </div>
 </section>
