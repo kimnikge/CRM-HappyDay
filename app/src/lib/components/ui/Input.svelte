@@ -1,31 +1,5 @@
 <script lang="ts">
-    /**
-     * Phone formatting: +7 (XXX) XXX-XX-XX for Russian numbers,
-     * free international format otherwise. Preserves cursor position.
-     */
-
-    /** Convert raw digits (with optional +) to formatted phone string */
-    function rawToFormatted(raw: string): string {
-        const hasPlus = raw.startsWith("+");
-        const digits = raw.replace(/\D/g, "");
-
-        if (digits.length === 0) return hasPlus ? "+" : "";
-
-        if (digits.startsWith("7")) {
-            const d = digits.slice(1);
-            if (d.length === 0) return "+7";
-            if (d.length <= 3) return `+7 (${d}`;
-            if (d.length <= 6) return `+7 (${d.slice(0, 3)}) ${d.slice(3)}`;
-            if (d.length <= 8)
-                return `+7 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-            if (d.length <= 10)
-                return `+7 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 8)}-${d.slice(8)}`;
-            return `+7 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 8)}-${d.slice(8, 10)}`;
-        }
-
-        if (hasPlus) return `+${digits}`;
-        return digits;
-    }
+    import { rawToFormatted } from "$lib/utils/phone-format";
 
     let {
         label,
