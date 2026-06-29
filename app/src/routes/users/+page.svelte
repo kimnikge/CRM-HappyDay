@@ -57,8 +57,8 @@
 <main class="min-h-screen bg-neutral-50">
     <Header />
 
-    <div class="mx-auto max-w-3xl p-6">
-        <h2 class="text-xl font-display font-semibold text-ink mb-6">Пользователи</h2>
+    <div class="mx-auto max-w-3xl px-3 sm:px-6 py-4 sm:py-6">
+        <h2 class="text-lg sm:text-xl font-display font-semibold text-ink mb-4 sm:mb-6">Пользователи</h2>
 
         {#if error}
             <div class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert">{error}</div>
@@ -67,36 +67,38 @@
         {#if loading}
             <p class="text-sm text-neutral-400 py-10 text-center">Загрузка...</p>
         {:else}
-            <div class="rounded-md bg-paper border border-neutral-200/60 shadow-card overflow-hidden">
+            <div class="table-responsive rounded-md bg-paper border border-neutral-200/60 shadow-card">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-neutral-200 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                            <th class="px-4 py-3">Пользователь</th>
-                            <th class="px-4 py-3">Телефон</th>
-                            <th class="px-4 py-3">Роль</th>
-                            <th class="px-4 py-3">Дата регистрации</th>
-                            <th class="px-4 py-3 w-1"></th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3">Пользователь</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 hidden sm:table-cell">Телефон</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3">Роль</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 hidden md:table-cell">Дата</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 w-1"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {#each users as u (u.id)}
                             <tr class="border-b border-neutral-100 hover:bg-neutral-50 transition-colors duration-100">
-                                <td class="px-4 py-2.5">
-                                    <span class="font-medium text-ink">{u.full_name}</span>
+                                <td class="px-3 sm:px-4 py-2.5">
+                                    <span class="font-medium text-ink text-sm">{u.full_name}</span>
                                     <span class="text-neutral-400 ml-1.5 text-xs">{u.initials}</span>
+                                    <!-- Show phone inline on mobile -->
+                                    <span class="block text-xs text-neutral-500 sm:hidden mt-0.5">{u.phone || "—"}</span>
                                 </td>
-                                <td class="px-4 py-2.5 text-neutral-600">{u.phone || "—"}</td>
-                                <td class="px-4 py-2.5">
+                                <td class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden sm:table-cell">{u.phone || "—"}</td>
+                                <td class="px-3 sm:px-4 py-2.5">
                                     {#if u.role === "admin"}
                                         <span class="inline-flex rounded-sm bg-mint/10 text-mint text-xs font-medium px-2 py-0.5">Админ</span>
                                     {:else}
                                         <span class="inline-flex rounded-sm bg-signal/10 text-signal text-xs font-medium px-2 py-0.5">Ожидает</span>
                                     {/if}
                                 </td>
-                                <td class="px-4 py-2.5 text-neutral-400 text-xs font-mono">
+                                <td class="px-3 sm:px-4 py-2.5 text-neutral-400 text-xs font-mono hidden md:table-cell">
                                     {new Date(u.created_at).toLocaleDateString("ru-RU")}
                                 </td>
-                                <td class="px-4 py-2.5 flex items-center gap-1.5">
+                                <td class="px-2 sm:px-4 py-2.5">
                                     {#if u.role === "pending"}
                                         <Button variant="primary" size="sm" onclick={() => toggleRole(u.id, "admin")}>
                                             Активировать

@@ -136,23 +136,23 @@
 <main class="min-h-screen bg-neutral-50">
     <Header />
 
-    <div class="mx-auto max-w-4xl p-6">
+    <div class="mx-auto max-w-4xl px-3 sm:px-6 py-4 sm:py-6">
         <!-- Toolbar -->
-        <div class="mb-6 flex items-center justify-between">
+        <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-                <h2 class="text-xl font-display font-semibold text-ink">
+                <h2 class="text-lg sm:text-xl font-display font-semibold text-ink">
                     Клиенты
                 </h2>
-                <p class="text-sm text-neutral-500">
+                <p class="text-xs sm:text-sm text-neutral-500">
                     {clients.length} клиентов
                 </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3">
                 <input
                     type="search"
                     bind:value={search}
                     placeholder="Поиск..."
-                    class="w-56 rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body placeholder:text-neutral-400
+                    class="w-full sm:w-56 rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body placeholder:text-neutral-400
                            focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
                            transition-colors duration-150"
                 />
@@ -177,19 +177,17 @@
                 Нет клиентов
             </p>
         {:else}
-            <div
-                class="rounded-md bg-paper border border-neutral-200/60 shadow-card overflow-hidden"
-            >
+            <div class="table-responsive rounded-md bg-paper border border-neutral-200/60 shadow-card">
                 <table class="w-full text-sm">
                     <thead>
                         <tr
                             class="border-b border-neutral-200 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
                         >
-                            <th class="px-4 py-3">Название</th>
-                            <th class="px-4 py-3">Контактное лицо</th>
-                            <th class="px-4 py-3">Телефон</th>
-                            <th class="px-4 py-3">Email</th>
-                            <th class="px-4 py-3 w-1"></th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3">Название</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 hidden sm:table-cell">Контакт</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3">Телефон</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 hidden md:table-cell">Email</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 w-1"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -197,25 +195,29 @@
                             <tr
                                 class="border-b border-neutral-100 hover:bg-neutral-50 transition-colors duration-100"
                             >
-                                <td class="px-4 py-2.5">
+                                <td class="px-3 sm:px-4 py-2.5">
                                     <button
-                                        class="text-ink hover:text-signal text-left bg-transparent border-0 p-0 cursor-pointer font-medium"
+                                        class="text-ink hover:text-signal text-left bg-transparent border-0 p-0 cursor-pointer font-medium text-sm"
                                         onclick={() => openEdit(c)}
                                         >{c.name}</button
                                     >
+                                    <!-- Show contact person inline on mobile -->
+                                    <span class="block text-xs text-neutral-500 sm:hidden mt-0.5">
+                                        {c.contact_person || "—"}
+                                    </span>
                                 </td>
-                                <td class="px-4 py-2.5 text-neutral-600"
+                                <td class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden sm:table-cell"
                                     >{c.contact_person || "—"}</td
                                 >
-                                <td class="px-4 py-2.5 text-neutral-600"
+                                <td class="px-3 sm:px-4 py-2.5 text-neutral-600 text-xs sm:text-sm"
                                     >{c.phone || "—"}</td
                                 >
-                                <td class="px-4 py-2.5 text-neutral-600"
+                                <td class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden md:table-cell text-xs sm:text-sm"
                                     >{c.email || "—"}</td
                                 >
-                                <td class="px-4 py-2.5">
+                                <td class="px-2 sm:px-4 py-2.5">
                                     <button
-                                        class="text-alert hover:opacity-70 text-xs bg-transparent border-0 p-0 cursor-pointer"
+                                        class="text-alert hover:opacity-70 text-xs bg-transparent border-0 p-0 cursor-pointer min-w-8 min-h-8"
                                         onclick={() =>
                                             deleteClient(c.id, c.name)}
                                         title="Удалить">✕</button
@@ -232,7 +234,7 @@
         {#if showCreate}
             <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
             <div
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
                 onclick={closeForm}
                 onkeydown={(e: KeyboardEvent) => {
                     if (e.key === "Escape") closeForm();
@@ -244,7 +246,7 @@
                 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                 <form
                     onsubmit={save}
-                    class="bg-paper rounded-md shadow-lg p-6 w-full max-w-md mx-4"
+                    class="bg-paper rounded-t-xl sm:rounded-md shadow-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
                     onclick={(e: MouseEvent) => e.stopPropagation()}
                     onkeydown={(e: KeyboardEvent) => {
                         if (e.key === "Escape") {
@@ -253,8 +255,12 @@
                         }
                     }}
                 >
+                    <!-- Drag handle for mobile sheet -->
+                    <div class="sm:hidden flex justify-center mb-2">
+                        <span class="block w-10 h-1 rounded-full bg-neutral-300"></span>
+                    </div>
                     <h3
-                        class="text-lg font-display font-semibold text-ink mb-4"
+                        class="text-base sm:text-lg font-display font-semibold text-ink mb-3 sm:mb-4"
                     >
                         {editId ? "Редактировать клиента" : "Новый клиент"}
                     </h3>

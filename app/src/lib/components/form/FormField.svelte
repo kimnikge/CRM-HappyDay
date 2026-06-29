@@ -46,7 +46,7 @@
     const id = `ff-${crypto.randomUUID().slice(0, 8)}`;
 </script>
 
-<div class={cols ? "col-span-2" : ""}>
+<div class={cols ? "col-span-full" : ""}>
     {#if type === "select"}
         <Select
             {label}

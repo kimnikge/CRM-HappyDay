@@ -56,7 +56,7 @@
 </script>
 
 <div
-    class="flex gap-4 overflow-x-auto pb-2"
+    class="flex gap-2 sm:gap-4 overflow-x-auto pb-2 snap-x snap-mandatory -mx-2 sm:mx-0 px-2 sm:px-0"
     role="region"
     aria-label="Канбан-доска заказов"
     aria-roledescription="kanban board"
@@ -69,4 +69,11 @@
             onDrop={handleDrop}
         />
     {/each}
+
+    <!-- Empty state when no columns -->
+    {#if statuses.length === 0}
+        <div class="flex items-center justify-center w-full py-12 text-sm text-neutral-400">
+            Нет колонок для отображения
+        </div>
+    {/if}
 </div>

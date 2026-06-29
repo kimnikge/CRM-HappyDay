@@ -51,8 +51,8 @@
 <main class="min-h-screen bg-neutral-50">
     <Header />
 
-    <div class="mx-auto max-w-md p-6">
-        <h2 class="text-xl font-display font-semibold text-ink mb-6">
+    <div class="mx-auto max-w-md px-3 sm:px-6 py-4 sm:py-6">
+        <h2 class="text-lg sm:text-xl font-display font-semibold text-ink mb-4 sm:mb-6">
             Профиль
         </h2>
 

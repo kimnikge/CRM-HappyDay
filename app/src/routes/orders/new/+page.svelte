@@ -131,14 +131,14 @@
 <main class="min-h-screen bg-neutral-50">
     <Header />
 
-    <div class="mx-auto max-w-2xl p-6">
+    <div class="mx-auto max-w-2xl px-3 sm:px-6 py-4 sm:py-6">
         <button
             onclick={() => goto("/")}
-            class="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink mb-4 cursor-pointer bg-transparent border-0 p-0 transition-colors duration-150"
+            class="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink mb-3 sm:mb-4 cursor-pointer bg-transparent border-0 p-0 transition-colors duration-150"
         >
             ← Назад к заказам
         </button>
-        <h2 class="mb-6 text-xl font-display font-semibold text-ink">
+        <h2 class="mb-4 sm:mb-6 text-lg sm:text-xl font-display font-semibold text-ink">
             Новый заказ
         </h2>
 
@@ -152,7 +152,7 @@
         {/if}
 
         <div
-            class="space-y-4 rounded-md bg-paper p-6 shadow-card border border-neutral-200/60"
+            class="space-y-3 sm:space-y-4 rounded-md bg-paper p-4 sm:p-6 shadow-card border border-neutral-200/60"
         >
             <!-- Client -->
             <Select
@@ -172,14 +172,14 @@
                 placeholder="ООО «Компания» или Иванов Иван"
             />
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="Контактное лицо" bind:value={contactPerson} />
                 <Input label="Телефон" bind:value={phone} />
             </div>
 
             <Input label="Email" type="email" bind:value={email} />
 
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Input
                     label="Дата мероприятия"
                     type="date"

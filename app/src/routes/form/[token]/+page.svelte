@@ -140,9 +140,9 @@
             </div>
         </div>
     {:else}
-        <div class="mx-auto max-w-3xl px-4 py-8">
-            <div class="mb-8 text-center">
-                <h1 class="text-2xl font-display font-semibold text-ink">
+        <div class="mx-auto max-w-3xl px-3 sm:px-4 py-6 sm:py-8">
+            <div class="mb-6 sm:mb-8 text-center">
+                <h1 class="text-xl sm:text-2xl font-display font-semibold text-ink">
                     Форма заказа кейтеринг
                 </h1>
                 {#if companyName}

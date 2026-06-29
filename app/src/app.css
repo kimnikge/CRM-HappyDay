@@ -6,3 +6,51 @@
 
 /* ---- Design tokens (generates bg-ink, text-signal, font-display, etc.) ---- */
 @import '$lib/styles/design-tokens.css';
+
+/* ---- Mobile nav link style ---- */
+.mobile-nav-link {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-neutral-700);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 150ms, color 150ms;
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link:active {
+    background-color: var(--color-neutral-100);
+    color: var(--color-ink);
+}
+
+/* ---- Mobile menu slide-in animation ---- */
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+.animate-slide-in {
+    animation: slide-in-right 200ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* ---- Reduce layout shift during page transitions ---- */
+main {
+    contain: layout style;
+}
+
+/* ---- Touch-friendly scroll for kanban columns ---- */
+@media (pointer: coarse) {
+    .kanban-col {
+        scroll-snap-align: start;
+    }
+}

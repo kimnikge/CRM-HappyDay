@@ -306,30 +306,30 @@
     <Header />
 
     {#if order}
-        <div class="mx-auto max-w-4xl p-6">
+        <div class="mx-auto max-w-4xl px-3 sm:px-6 py-4 sm:py-6">
             <button
                 onclick={() => goto("/")}
-                class="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink mb-4 cursor-pointer bg-transparent border-0 p-0 transition-colors duration-150"
+                class="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink mb-3 sm:mb-4 cursor-pointer bg-transparent border-0 p-0 transition-colors duration-150"
             >
                 ← Назад к заказам
             </button>
             <!-- Header -->
-            <div class="mb-6 flex items-center justify-between">
+            <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                    <h2 class="text-xl font-display font-semibold text-ink">
+                    <h2 class="text-lg sm:text-xl font-display font-semibold text-ink">
                         Заказ №{order.order_number}
                     </h2>
                     <p class="text-sm text-neutral-500">{order.company_name}</p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2">
                     <!-- G1: Form link + WhatsApp -->
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex flex-wrap items-center gap-1.5">
                         {#if order.form_token}
                             {#if order.form_submitted}
                                 <span
                                     class="text-xs text-neutral-400 bg-neutral-100 rounded px-2 py-1"
                                 >
-                                    Форма заполнена ✓
+                                    Заполнена ✓
                                 </span>
                             {:else}
                                 <button
@@ -339,7 +339,7 @@
                                 >
                                     {formLinkCopied
                                         ? "Скопировано ✓"
-                                        : "📋 Ссылка на форму"}
+                                        : "📋 Форма"}
                                 </button>
                             {/if}
                         {/if}
@@ -349,7 +349,7 @@
                                 onclick={openWhatsApp}
                                 title="Написать в WhatsApp"
                             >
-                                💬 WhatsApp
+                                💬 WA
                             </button>
                         {/if}
                     </div>
@@ -357,7 +357,7 @@
                         value={order.status_id}
                         onchange={(e) =>
                             changeStatus((e.target as HTMLSelectElement).value)}
-                        class="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body
+                        class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body
                                focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink
                                hover:border-neutral-400 transition-colors duration-150"
                     >
@@ -376,7 +376,7 @@
             {#if showCancelReason}
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                    class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
                     onclick={() => (showCancelReason = false)}
                     onkeydown={(e: KeyboardEvent) => {
                         if (e.key === "Escape") showCancelReason = false;
@@ -387,15 +387,16 @@
                 >
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <div
-                        class="bg-paper rounded-md shadow-lg p-6 w-full max-w-sm mx-4"
+                        class="bg-paper rounded-t-xl sm:rounded-md shadow-lg p-4 sm:p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto"
                         onclick={(e: MouseEvent) => e.stopPropagation()}
                         onkeydown={(e: KeyboardEvent) => {
                             if (e.key === "Escape") e.stopPropagation();
                         }}
                     >
-                        <h3
-                            class="text-lg font-display font-semibold text-ink mb-3"
-                        >
+                        <div class="sm:hidden flex justify-center mb-2">
+                            <span class="block w-10 h-1 rounded-full bg-neutral-300"></span>
+                        </div>
+                        <h3 class="text-base sm:text-lg font-display font-semibold text-ink mb-3">
                             Причина отмены
                         </h3>
                         <textarea

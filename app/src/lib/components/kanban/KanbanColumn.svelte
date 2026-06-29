@@ -78,7 +78,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-    class="kanban-col flex w-72 shrink-0 flex-col rounded-md bg-neutral-100 shadow-column {tempClass(
+    class="kanban-col flex w-64 sm:w-72 shrink-0 snap-start flex-col rounded-md bg-neutral-100 shadow-column {tempClass(
         status.order_index,
     )}"
     ondragover={handleDragOver}
@@ -86,17 +86,17 @@
     ondrop={handleDrop}
 >
     <!-- Column header -->
-    <div class="flex items-center justify-between px-3 pt-3 pb-2">
-        <span class="text-sm font-semibold text-neutral-700">
+    <div class="flex items-center justify-between px-2.5 sm:px-3 pt-2.5 sm:pt-3 pb-1.5 sm:pb-2">
+        <span class="text-xs sm:text-sm font-semibold text-neutral-700">
             {status.name}
         </span>
-        <div class="flex items-center gap-2 text-right">
+        <div class="flex items-center gap-1.5 sm:gap-2 text-right">
             <span
-                class="inline-flex items-center justify-center rounded-full bg-neutral-300 px-2 py-0.5 text-xs font-bold text-neutral-600 font-mono tabular-nums min-w-6"
+                class="inline-flex items-center justify-center rounded-full bg-neutral-300 px-1.5 sm:px-2 py-0.5 text-2xs sm:text-xs font-bold text-neutral-600 font-mono tabular-nums min-w-5 sm:min-w-6"
             >
                 {orders.length}
             </span>
-            <span class="text-xs text-neutral-500 font-mono tabular-nums">
+            <span class="text-2xs sm:text-xs text-neutral-500 font-mono tabular-nums">
                 {fmtCurrency(totalSum())}
             </span>
         </div>

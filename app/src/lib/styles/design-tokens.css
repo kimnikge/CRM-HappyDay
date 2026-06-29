@@ -5,10 +5,17 @@
    ============================================================ */
 
 @theme {
+  /* ---- Breakpoints ---- */
+  --breakpoint-xs: 30rem;
+
   /* ---- Typography ---- */
   --font-display: 'Golos Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body:    'Golos Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:    'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  /* Extra-small font size for tight mobile layouts */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.875rem;
 
   /* ---- Palette: Core ---- */
   --color-ink:            #1a1d23;
@@ -116,6 +123,91 @@
   --space-8: 2rem;     /* 32px */
   --space-10: 2.5rem;  /* 40px */
   --space-12: 3rem;    /* 48px */
+
+  /* Touch-friendly minimum tap target */
+  --touch-target: 44px;
+}
+
+/* ---- Mobile / responsive utilities ---- */
+@utility container-page {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+
+  @media (width >= 48rem) {
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
+  }
+}
+
+/* Horizontal scroll wrapper — shows scroll hint on mobile */
+@utility scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-300) transparent;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-300);
+    border-radius: 2px;
+  }
+}
+
+/* Responsive table — wraps in scrollable container on small screens */
+@utility table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  & table {
+    min-width: 600px;
+    width: 100%;
+  }
+}
+
+/* Prevent text zoom on iOS for inputs */
+@layer base {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px !important; /* Prevents iOS zoom on focus for inputs < 16px */
+  }
+
+  @media (width < 40rem) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important; /* Reinforced for small screens */
+    }
+  }
+
+  /* Safe area padding for notched devices */
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Touch-friendly tap targets */
+  @media (pointer: coarse) {
+    a,
+    button,
+    [role="button"],
+    input[type="checkbox"],
+    input[type="radio"],
+    select {
+      min-height: var(--touch-target);
+      min-width: var(--touch-target);
+    }
+  }
 }
 
 /* ---- Transitions ---- */

@@ -187,59 +187,58 @@
     {:else}
         <!-- Toolbar -->
         <div
-            class="sticky top-0 z-10 flex items-center gap-3 border-b border-neutral-200 bg-paper/90 backdrop-blur px-6 py-2.5 flex-wrap"
+            class="sticky top-0 z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 border-b border-neutral-200 bg-paper/90 backdrop-blur px-3 sm:px-6 py-2.5"
         >
-            <input
-                type="search"
-                bind:value={searchInput}
-                oninput={handleSearch}
-                placeholder="Поиск по названию, контакту или номеру..."
-                class="w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body placeholder:text-neutral-400
-                   focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
-                   transition-colors duration-150"
-            />
-            <input
-                type="date"
-                onchange={handleDateFilter}
-                class="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body
-                   focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
-                   transition-colors duration-150"
-            />
-            <!-- G6: Manager filter -->
-            <select
-                value={selectedManager}
-                onchange={handleManagerFilter}
-                class="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body
-                   focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
-                   transition-colors duration-150"
-            >
-                <option value="">Все менеджеры</option>
-                {#each managers as m}
-                    <option value={m.id}>{m.initials || m.full_name}</option>
-                {/each}
-            </select>
-            <!-- G7: Sort -->
-            <select
-                value={sortByVal}
-                onchange={handleSortChange}
-                class="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body
-                   focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
-                   transition-colors duration-150"
-            >
-                <option value="created_at">По дате создания</option>
-                <option value="event_date">По дате мероприятия</option>
-            </select>
-            <div class="ml-auto flex items-center gap-2">
-                <!-- G8: Export -->
+            <div class="flex flex-wrap items-center gap-2 flex-1">
+                <input
+                    type="search"
+                    bind:value={searchInput}
+                    oninput={handleSearch}
+                    placeholder="Поиск..."
+                    class="w-full sm:w-48 md:w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body placeholder:text-neutral-400
+                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
+                       transition-colors duration-150"
+                />
+                <input
+                    type="date"
+                    onchange={handleDateFilter}
+                    class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body
+                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
+                       transition-colors duration-150"
+                />
+                <select
+                    value={selectedManager}
+                    onchange={handleManagerFilter}
+                    class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body max-w-36
+                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
+                       transition-colors duration-150"
+                >
+                    <option value="">Все менеджеры</option>
+                    {#each managers as m}
+                        <option value={m.id}>{m.initials || m.full_name}</option>
+                    {/each}
+                </select>
+                <select
+                    value={sortByVal}
+                    onchange={handleSortChange}
+                    class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body
+                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
+                       transition-colors duration-150"
+                >
+                    <option value="created_at">По созданию</option>
+                    <option value="event_date">По мероприятию</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onclick={exportCSV}>
-                    Экспорт CSV
+                    CSV
                 </Button>
-                <Button href="/orders/new">+ Создать заказ</Button>
+                <Button href="/orders/new">+ Создать</Button>
             </div>
         </div>
 
         <!-- Kanban Board -->
-        <div class="p-4">
+        <div class="p-2 sm:p-4">
             {#if kanban.loading}
                 <div class="flex items-center justify-center py-20">
                     <p class="text-sm text-neutral-500 animate-pulse">
@@ -268,38 +267,38 @@
                 </div>
             {:else}
                 <!-- G22: Quick stats -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
                     <div
-                        class="rounded-md bg-paper p-3 border border-neutral-200/60 shadow-card"
+                        class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
-                        <p class="text-xs text-neutral-500">Всего заказов</p>
-                        <p class="text-lg font-display font-semibold text-ink">
+                        <p class="text-2xs sm:text-xs text-neutral-500">Всего</p>
+                        <p class="text-base sm:text-lg font-display font-semibold text-ink">
                             {kanban.orders.length}
                         </p>
                     </div>
                     <div
-                        class="rounded-md bg-paper p-3 border border-neutral-200/60 shadow-card"
+                        class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
-                        <p class="text-xs text-neutral-500">В работе</p>
+                        <p class="text-2xs sm:text-xs text-neutral-500">В работе</p>
                         <p
-                            class="text-lg font-display font-semibold text-signal"
+                            class="text-base sm:text-lg font-display font-semibold text-signal"
                         >
                             {activeOrders}
                         </p>
                     </div>
                     <div
-                        class="rounded-md bg-paper p-3 border border-neutral-200/60 shadow-card"
+                        class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
-                        <p class="text-xs text-neutral-500">В этом месяце</p>
-                        <p class="text-lg font-display font-semibold text-ink">
+                        <p class="text-2xs sm:text-xs text-neutral-500">За месяц</p>
+                        <p class="text-base sm:text-lg font-display font-semibold text-ink">
                             {thisMonthOrders}
                         </p>
                     </div>
                     <div
-                        class="rounded-md bg-paper p-3 border border-neutral-200/60 shadow-card"
+                        class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
-                        <p class="text-xs text-neutral-500">Общая выручка</p>
-                        <p class="text-lg font-display font-semibold text-mint">
+                        <p class="text-2xs sm:text-xs text-neutral-500">Выручка</p>
+                        <p class="text-base sm:text-lg font-display font-semibold text-mint">
                             {new Intl.NumberFormat("ru-RU").format(
                                 totalRevenue,
                             )} ₽
