@@ -72,7 +72,9 @@
 
     <!-- Empty state when no columns -->
     {#if statuses.length === 0}
-        <div class="flex items-center justify-center w-full py-12 text-sm text-neutral-400">
+        <div
+            class="flex items-center justify-center w-full py-12 text-sm text-neutral-400"
+        >
             Нет колонок для отображения
         </div>
     {/if}

@@ -24,7 +24,11 @@
 <section
     class="rounded-md bg-paper p-4 sm:p-6 shadow-card border border-neutral-200/60"
 >
-    <h2 class="mb-3 sm:mb-4 text-sm sm:text-base font-display font-semibold text-ink">{title}</h2>
+    <h2
+        class="mb-3 sm:mb-4 text-sm sm:text-base font-display font-semibold text-ink"
+    >
+        {title}
+    </h2>
     <div class="grid gap-3 sm:gap-4 {gridClass}">
         {@render children()}
     </div>

@@ -86,7 +86,9 @@
     ondrop={handleDrop}
 >
     <!-- Column header -->
-    <div class="flex items-center justify-between px-2.5 sm:px-3 pt-2.5 sm:pt-3 pb-1.5 sm:pb-2">
+    <div
+        class="flex items-center justify-between px-2.5 sm:px-3 pt-2.5 sm:pt-3 pb-1.5 sm:pb-2"
+    >
         <span class="text-xs sm:text-sm font-semibold text-neutral-700">
             {status.name}
         </span>
@@ -96,7 +98,9 @@
             >
                 {orders.length}
             </span>
-            <span class="text-2xs sm:text-xs text-neutral-500 font-mono tabular-nums">
+            <span
+                class="text-2xs sm:text-xs text-neutral-500 font-mono tabular-nums"
+            >
                 {fmtCurrency(totalSum())}
             </span>
         </div>

@@ -16,6 +16,7 @@
         options = [] as readonly Option[],
         cols = false,
         rows = 2,
+        phone = false,
         min,
     }: {
         label: string;
@@ -33,6 +34,7 @@
         options?: readonly Option[];
         cols?: boolean;
         rows?: number;
+        phone?: boolean;
         min?: number;
     } = $props();
 
@@ -40,8 +42,12 @@
     // NOTE: never pass undefined through bind: — Svelte 5 throws props_invalid_value
     // when bind:value={undefined} is used on a prop with a fallback value.
     let inputValue = $state(value == null ? "" : String(value));
-    $effect(() => { inputValue = value == null ? "" : String(value); });
-    $effect(() => { value = inputValue === "" ? null : inputValue; });
+    $effect(() => {
+        inputValue = value == null ? "" : String(value);
+    });
+    $effect(() => {
+        value = inputValue === "" ? null : inputValue;
+    });
 
     const id = `ff-${crypto.randomUUID().slice(0, 8)}`;
 </script>
@@ -69,6 +75,14 @@
                    hover:border-neutral-400 transition-colors duration-150"
         ></textarea>
     {:else}
-        <Input {label} {type} bind:value={inputValue} {required} {placeholder} {min} />
+        <Input
+            {label}
+            {type}
+            {phone}
+            bind:value={inputValue}
+            {required}
+            {placeholder}
+            {min}
+        />
     {/if}
 </div>

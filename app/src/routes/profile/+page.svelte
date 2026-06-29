@@ -4,6 +4,7 @@
     import { auth } from "$lib/stores/auth.svelte";
     import Header from "$lib/components/Header.svelte";
     import Button from "$lib/components/ui/Button.svelte";
+    import Input from "$lib/components/ui/Input.svelte";
 
     let fullName = $state("");
     let phone = $state("");
@@ -52,7 +53,9 @@
     <Header />
 
     <div class="mx-auto max-w-md px-3 sm:px-6 py-4 sm:py-6">
-        <h2 class="text-lg sm:text-xl font-display font-semibold text-ink mb-4 sm:mb-6">
+        <h2
+            class="text-lg sm:text-xl font-display font-semibold text-ink mb-4 sm:mb-6"
+        >
             Профиль
         </h2>
 
@@ -107,19 +110,7 @@
                 </div>
 
                 <div>
-                    <label
-                        for="pf-phone"
-                        class="block mb-1 text-sm font-medium text-neutral-700"
-                        >Телефон</label
-                    >
-                    <input
-                        id="pf-phone"
-                        type="text"
-                        bind:value={phone}
-                        class="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm font-body
-                               placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink
-                               hover:border-neutral-400 transition-colors duration-150"
-                    />
+                    <Input label="Телефон" bind:value={phone} phone />
                 </div>
 
                 <Button type="submit" variant="primary" full loading={saving}>

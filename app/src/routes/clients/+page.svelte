@@ -3,6 +3,7 @@
     import { supabase } from "$lib/supabase";
     import Header from "$lib/components/Header.svelte";
     import Button from "$lib/components/ui/Button.svelte";
+    import Input from "$lib/components/ui/Input.svelte";
     import { goto } from "$app/navigation";
 
     let clients = $state<any[]>([]);
@@ -138,9 +139,13 @@
 
     <div class="mx-auto max-w-4xl px-3 sm:px-6 py-4 sm:py-6">
         <!-- Toolbar -->
-        <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div
+            class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+        >
             <div>
-                <h2 class="text-lg sm:text-xl font-display font-semibold text-ink">
+                <h2
+                    class="text-lg sm:text-xl font-display font-semibold text-ink"
+                >
                     Клиенты
                 </h2>
                 <p class="text-xs sm:text-sm text-neutral-500">
@@ -177,16 +182,25 @@
                 Нет клиентов
             </p>
         {:else}
-            <div class="table-responsive rounded-md bg-paper border border-neutral-200/60 shadow-card">
+            <div
+                class="table-responsive rounded-md bg-paper border border-neutral-200/60 shadow-card"
+            >
                 <table class="w-full text-sm">
                     <thead>
                         <tr
                             class="border-b border-neutral-200 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
                         >
-                            <th class="px-3 sm:px-4 py-2.5 sm:py-3">Название</th>
-                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 hidden sm:table-cell">Контакт</th>
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3">Название</th
+                            >
+                            <th
+                                class="px-3 sm:px-4 py-2.5 sm:py-3 hidden sm:table-cell"
+                                >Контакт</th
+                            >
                             <th class="px-3 sm:px-4 py-2.5 sm:py-3">Телефон</th>
-                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 hidden md:table-cell">Email</th>
+                            <th
+                                class="px-3 sm:px-4 py-2.5 sm:py-3 hidden md:table-cell"
+                                >Email</th
+                            >
                             <th class="px-3 sm:px-4 py-2.5 sm:py-3 w-1"></th>
                         </tr>
                     </thead>
@@ -202,17 +216,22 @@
                                         >{c.name}</button
                                     >
                                     <!-- Show contact person inline on mobile -->
-                                    <span class="block text-xs text-neutral-500 sm:hidden mt-0.5">
+                                    <span
+                                        class="block text-xs text-neutral-500 sm:hidden mt-0.5"
+                                    >
                                         {c.contact_person || "—"}
                                     </span>
                                 </td>
-                                <td class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden sm:table-cell"
+                                <td
+                                    class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden sm:table-cell"
                                     >{c.contact_person || "—"}</td
                                 >
-                                <td class="px-3 sm:px-4 py-2.5 text-neutral-600 text-xs sm:text-sm"
+                                <td
+                                    class="px-3 sm:px-4 py-2.5 text-neutral-600 text-xs sm:text-sm"
                                     >{c.phone || "—"}</td
                                 >
-                                <td class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden md:table-cell text-xs sm:text-sm"
+                                <td
+                                    class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden md:table-cell text-xs sm:text-sm"
                                     >{c.email || "—"}</td
                                 >
                                 <td class="px-2 sm:px-4 py-2.5">
@@ -257,7 +276,8 @@
                 >
                     <!-- Drag handle for mobile sheet -->
                     <div class="sm:hidden flex justify-center mb-2">
-                        <span class="block w-10 h-1 rounded-full bg-neutral-300"></span>
+                        <span class="block w-10 h-1 rounded-full bg-neutral-300"
+                        ></span>
                     </div>
                     <h3
                         class="text-base sm:text-lg font-display font-semibold text-ink mb-3 sm:mb-4"
@@ -302,19 +322,7 @@
                                hover:border-neutral-400 transition-colors duration-150"
                     />
 
-                    <label
-                        for="cl-phone"
-                        class="block mb-1 text-sm font-medium text-neutral-700"
-                        >Телефон</label
-                    >
-                    <input
-                        id="cl-phone"
-                        type="text"
-                        bind:value={phone}
-                        class="mb-3 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm font-body
-                               placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink
-                               hover:border-neutral-400 transition-colors duration-150"
-                    />
+                    <Input label="Телефон" bind:value={phone} phone />
 
                     <label
                         for="cl-email"

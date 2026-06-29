@@ -88,7 +88,10 @@
     </div>
 
     <!-- Desktop navigation -->
-    <nav class="hidden md:flex items-center gap-2" aria-label="Основная навигация">
+    <nav
+        class="hidden md:flex items-center gap-2"
+        aria-label="Основная навигация"
+    >
         {#if pendingCount > 0}
             <a
                 href="/?pending=1"
@@ -126,7 +129,10 @@
             title={dark ? "Светлая тема" : "Тёмная тема"}
             aria-label="Переключить тему">{dark ? "☀️" : "🌙"}</button
         >
-        <span class="text-xs text-neutral-500 font-mono hidden lg:inline" aria-live="polite">
+        <span
+            class="text-xs text-neutral-500 font-mono hidden lg:inline"
+            aria-live="polite"
+        >
             {auth.session?.user?.email ?? ""}
         </span>
         <Button variant="ghost" size="sm" onclick={logout}>Выйти</Button>
@@ -198,13 +204,15 @@
             }}
         >
             <!-- Menu header -->
-            <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-200">
+            <div
+                class="flex items-center justify-between px-4 py-3 border-b border-neutral-200"
+            >
                 <span class="text-sm font-semibold text-ink">Меню</span>
                 <button
                     class="flex items-center justify-center w-8 h-8 bg-transparent border-0 cursor-pointer rounded-md hover:bg-neutral-100"
                     onclick={closeMenu}
-                    aria-label="Закрыть меню"
-                >✕</button>
+                    aria-label="Закрыть меню">✕</button
+                >
             </div>
 
             <!-- Nav links -->
@@ -212,27 +220,49 @@
                 <a href="/" class="mobile-nav-link" onclick={handleNavClick}>
                     <span class="mr-3">📋</span>Заказы
                 </a>
-                <a href="/orders/new" class="mobile-nav-link" onclick={handleNavClick}>
+                <a
+                    href="/orders/new"
+                    class="mobile-nav-link"
+                    onclick={handleNavClick}
+                >
                     <span class="mr-3">➕</span>Новый заказ
                 </a>
-                <a href="/clients" class="mobile-nav-link" onclick={handleNavClick}>
+                <a
+                    href="/clients"
+                    class="mobile-nav-link"
+                    onclick={handleNavClick}
+                >
                     <span class="mr-3">👥</span>Клиенты
                 </a>
-                <a href="/calendar" class="mobile-nav-link" onclick={handleNavClick}>
+                <a
+                    href="/calendar"
+                    class="mobile-nav-link"
+                    onclick={handleNavClick}
+                >
                     <span class="mr-3">📅</span>Календарь
                 </a>
                 {#if auth.role === "admin"}
-                    <a href="/users" class="mobile-nav-link" onclick={handleNavClick}>
+                    <a
+                        href="/users"
+                        class="mobile-nav-link"
+                        onclick={handleNavClick}
+                    >
                         <span class="mr-3">👤</span>Пользователи
                     </a>
                 {/if}
-                <a href="/profile" class="mobile-nav-link" onclick={handleNavClick}>
+                <a
+                    href="/profile"
+                    class="mobile-nav-link"
+                    onclick={handleNavClick}
+                >
                     <span class="mr-3">⚙️</span>Профиль
                 </a>
                 <hr class="my-2 border-neutral-200" />
                 <button
                     class="mobile-nav-link w-full text-left"
-                    onclick={() => { toggleDark(); }}
+                    onclick={() => {
+                        toggleDark();
+                    }}
                 >
                     <span class="mr-3">{dark ? "☀️" : "🌙"}</span>
                     {dark ? "Светлая тема" : "Тёмная тема"}

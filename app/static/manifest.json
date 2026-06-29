@@ -1,21 +1,24 @@
 {
-	"name": "Catering CRM",
-	"short_name": "CRM",
-	"description": "Управление заказами кейтеринга",
-	"start_url": "/",
-	"scope": "/",
-	"display": "standalone",
-	"orientation": "any",
-	"background_color": "#fafaf8",
-	"theme_color": "#fafaf8",
-	"icons": [
-		{
-			"src": "/favicon.svg",
-			"sizes": "any",
-			"type": "image/svg+xml",
-			"purpose": "any maskable"
-		}
-	],
-	"categories": ["business", "productivity"],
-	"lang": "ru"
+    "name": "Catering CRM",
+    "short_name": "CRM",
+    "description": "Управление заказами кейтеринга",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#fafaf8",
+    "theme_color": "#fafaf8",
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "business",
+        "productivity"
+    ],
+    "lang": "ru"
 }

@@ -115,7 +115,9 @@
     <div class="flex-1 p-2.5 sm:p-3">
         <!-- Top row: company + urgent -->
         <div class="flex items-start justify-between gap-1.5 mb-0.5 sm:mb-1">
-            <span class="text-xs sm:text-sm font-semibold text-ink leading-tight truncate">
+            <span
+                class="text-xs sm:text-sm font-semibold text-ink leading-tight truncate"
+            >
                 {order.company_name}
             </span>
             {#if isUrgent(order.event_date)}

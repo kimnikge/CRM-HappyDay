@@ -58,62 +58,119 @@
     <Header />
 
     <div class="mx-auto max-w-3xl px-3 sm:px-6 py-4 sm:py-6">
-        <h2 class="text-lg sm:text-xl font-display font-semibold text-ink mb-4 sm:mb-6">Пользователи</h2>
+        <h2
+            class="text-lg sm:text-xl font-display font-semibold text-ink mb-4 sm:mb-6"
+        >
+            Пользователи
+        </h2>
 
         {#if error}
-            <div class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert">{error}</div>
+            <div
+                class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert"
+            >
+                {error}
+            </div>
         {/if}
 
         {#if loading}
-            <p class="text-sm text-neutral-400 py-10 text-center">Загрузка...</p>
+            <p class="text-sm text-neutral-400 py-10 text-center">
+                Загрузка...
+            </p>
         {:else}
-            <div class="table-responsive rounded-md bg-paper border border-neutral-200/60 shadow-card">
+            <div
+                class="table-responsive rounded-md bg-paper border border-neutral-200/60 shadow-card"
+            >
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-neutral-200 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                            <th class="px-3 sm:px-4 py-2.5 sm:py-3">Пользователь</th>
-                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 hidden sm:table-cell">Телефон</th>
+                        <tr
+                            class="border-b border-neutral-200 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider"
+                        >
+                            <th class="px-3 sm:px-4 py-2.5 sm:py-3"
+                                >Пользователь</th
+                            >
+                            <th
+                                class="px-3 sm:px-4 py-2.5 sm:py-3 hidden sm:table-cell"
+                                >Телефон</th
+                            >
                             <th class="px-3 sm:px-4 py-2.5 sm:py-3">Роль</th>
-                            <th class="px-3 sm:px-4 py-2.5 sm:py-3 hidden md:table-cell">Дата</th>
+                            <th
+                                class="px-3 sm:px-4 py-2.5 sm:py-3 hidden md:table-cell"
+                                >Дата</th
+                            >
                             <th class="px-3 sm:px-4 py-2.5 sm:py-3 w-1"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {#each users as u (u.id)}
-                            <tr class="border-b border-neutral-100 hover:bg-neutral-50 transition-colors duration-100">
+                            <tr
+                                class="border-b border-neutral-100 hover:bg-neutral-50 transition-colors duration-100"
+                            >
                                 <td class="px-3 sm:px-4 py-2.5">
-                                    <span class="font-medium text-ink text-sm">{u.full_name}</span>
-                                    <span class="text-neutral-400 ml-1.5 text-xs">{u.initials}</span>
+                                    <span class="font-medium text-ink text-sm"
+                                        >{u.full_name}</span
+                                    >
+                                    <span
+                                        class="text-neutral-400 ml-1.5 text-xs"
+                                        >{u.initials}</span
+                                    >
                                     <!-- Show phone inline on mobile -->
-                                    <span class="block text-xs text-neutral-500 sm:hidden mt-0.5">{u.phone || "—"}</span>
+                                    <span
+                                        class="block text-xs text-neutral-500 sm:hidden mt-0.5"
+                                        >{u.phone || "—"}</span
+                                    >
                                 </td>
-                                <td class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden sm:table-cell">{u.phone || "—"}</td>
+                                <td
+                                    class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden sm:table-cell"
+                                    >{u.phone || "—"}</td
+                                >
                                 <td class="px-3 sm:px-4 py-2.5">
                                     {#if u.role === "admin"}
-                                        <span class="inline-flex rounded-sm bg-mint/10 text-mint text-xs font-medium px-2 py-0.5">Админ</span>
+                                        <span
+                                            class="inline-flex rounded-sm bg-mint/10 text-mint text-xs font-medium px-2 py-0.5"
+                                            >Админ</span
+                                        >
                                     {:else}
-                                        <span class="inline-flex rounded-sm bg-signal/10 text-signal text-xs font-medium px-2 py-0.5">Ожидает</span>
+                                        <span
+                                            class="inline-flex rounded-sm bg-signal/10 text-signal text-xs font-medium px-2 py-0.5"
+                                            >Ожидает</span
+                                        >
                                     {/if}
                                 </td>
-                                <td class="px-3 sm:px-4 py-2.5 text-neutral-400 text-xs font-mono hidden md:table-cell">
-                                    {new Date(u.created_at).toLocaleDateString("ru-RU")}
+                                <td
+                                    class="px-3 sm:px-4 py-2.5 text-neutral-400 text-xs font-mono hidden md:table-cell"
+                                >
+                                    {new Date(u.created_at).toLocaleDateString(
+                                        "ru-RU",
+                                    )}
                                 </td>
                                 <td class="px-2 sm:px-4 py-2.5">
                                     {#if u.role === "pending"}
-                                        <Button variant="primary" size="sm" onclick={() => toggleRole(u.id, "admin")}>
+                                        <Button
+                                            variant="primary"
+                                            size="sm"
+                                            onclick={() =>
+                                                toggleRole(u.id, "admin")}
+                                        >
                                             Активировать
                                         </Button>
                                     {:else if u.id !== auth.session?.user?.id}
-                                        <Button variant="secondary" size="sm" onclick={() => toggleRole(u.id, "pending")}>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onclick={() =>
+                                                toggleRole(u.id, "pending")}
+                                        >
                                             Отключить
                                         </Button>
                                     {/if}
                                     {#if u.id !== auth.session?.user?.id}
                                         <button
                                             class="text-alert hover:opacity-70 text-xs bg-transparent border-0 p-0 cursor-pointer ml-1"
-                                            onclick={() => deleteUser(u.id, u.full_name)}
+                                            onclick={() =>
+                                                deleteUser(u.id, u.full_name)}
                                             title="Удалить пользователя"
-                                        >✕</button>
+                                            >✕</button
+                                        >
                                     {/if}
                                 </td>
                             </tr>

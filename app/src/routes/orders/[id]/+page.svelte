@@ -314,9 +314,13 @@
                 ← Назад к заказам
             </button>
             <!-- Header -->
-            <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div
+                class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+            >
                 <div>
-                    <h2 class="text-lg sm:text-xl font-display font-semibold text-ink">
+                    <h2
+                        class="text-lg sm:text-xl font-display font-semibold text-ink"
+                    >
                         Заказ №{order.order_number}
                     </h2>
                     <p class="text-sm text-neutral-500">{order.company_name}</p>
@@ -394,9 +398,13 @@
                         }}
                     >
                         <div class="sm:hidden flex justify-center mb-2">
-                            <span class="block w-10 h-1 rounded-full bg-neutral-300"></span>
+                            <span
+                                class="block w-10 h-1 rounded-full bg-neutral-300"
+                            ></span>
                         </div>
-                        <h3 class="text-base sm:text-lg font-display font-semibold text-ink mb-3">
+                        <h3
+                            class="text-base sm:text-lg font-display font-semibold text-ink mb-3"
+                        >
                             Причина отмены
                         </h3>
                         <textarea
@@ -450,6 +458,7 @@
                     <FormField
                         label="Телефон/WhatsApp"
                         bind:value={order.phone}
+                        phone
                     />
                     <FormField
                         label="Email"

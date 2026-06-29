@@ -138,7 +138,9 @@
         >
             ← Назад к заказам
         </button>
-        <h2 class="mb-4 sm:mb-6 text-lg sm:text-xl font-display font-semibold text-ink">
+        <h2
+            class="mb-4 sm:mb-6 text-lg sm:text-xl font-display font-semibold text-ink"
+        >
             Новый заказ
         </h2>
 
@@ -174,7 +176,7 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="Контактное лицо" bind:value={contactPerson} />
-                <Input label="Телефон" bind:value={phone} />
+                <Input label="Телефон" bind:value={phone} phone />
             </div>
 
             <Input label="Email" type="email" bind:value={email} />

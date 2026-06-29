@@ -215,7 +215,8 @@
                 >
                     <option value="">Все менеджеры</option>
                     {#each managers as m}
-                        <option value={m.id}>{m.initials || m.full_name}</option>
+                        <option value={m.id}>{m.initials || m.full_name}</option
+                        >
                     {/each}
                 </select>
                 <select
@@ -267,19 +268,27 @@
                 </div>
             {:else}
                 <!-- G22: Quick stats -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <div
+                    class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4"
+                >
                     <div
                         class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
-                        <p class="text-2xs sm:text-xs text-neutral-500">Всего</p>
-                        <p class="text-base sm:text-lg font-display font-semibold text-ink">
+                        <p class="text-2xs sm:text-xs text-neutral-500">
+                            Всего
+                        </p>
+                        <p
+                            class="text-base sm:text-lg font-display font-semibold text-ink"
+                        >
                             {kanban.orders.length}
                         </p>
                     </div>
                     <div
                         class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
-                        <p class="text-2xs sm:text-xs text-neutral-500">В работе</p>
+                        <p class="text-2xs sm:text-xs text-neutral-500">
+                            В работе
+                        </p>
                         <p
                             class="text-base sm:text-lg font-display font-semibold text-signal"
                         >
@@ -289,16 +298,24 @@
                     <div
                         class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
-                        <p class="text-2xs sm:text-xs text-neutral-500">За месяц</p>
-                        <p class="text-base sm:text-lg font-display font-semibold text-ink">
+                        <p class="text-2xs sm:text-xs text-neutral-500">
+                            За месяц
+                        </p>
+                        <p
+                            class="text-base sm:text-lg font-display font-semibold text-ink"
+                        >
                             {thisMonthOrders}
                         </p>
                     </div>
                     <div
                         class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
-                        <p class="text-2xs sm:text-xs text-neutral-500">Выручка</p>
-                        <p class="text-base sm:text-lg font-display font-semibold text-mint">
+                        <p class="text-2xs sm:text-xs text-neutral-500">
+                            Выручка
+                        </p>
+                        <p
+                            class="text-base sm:text-lg font-display font-semibold text-mint"
+                        >
                             {new Intl.NumberFormat("ru-RU").format(
                                 totalRevenue,
                             )} ₽
