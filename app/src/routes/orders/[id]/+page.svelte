@@ -224,30 +224,23 @@
         try {
             // 1. Generate PDF blob
             const pdfBlob = generateOrderPDF(order);
-            // Sanitize filename: Latin/numbers only (Supabase Storage restriction)
             const safeName = order.company_name
                 .replace(/[^a-zA-Z0-9]/g, "_")
                 .replace(/_+/g, "_")
                 .replace(/^_|_$/g, "")
                 || "order";
             const fileName = `Order_${order.order_number}_${safeName}.pdf`;
-            const file = new File([pdfBlob], fileName, {
-                type: "application/pdf",
-            });
+            const file = new File([pdfBlob], fileName, { type: "application/pdf" });
 
-            // 2. Upload directly to Supabase Storage (browser client has auth)
+            // 2. Upload to Supabase Storage + record in DB
             const filePath = `${order.id}/${Date.now()}_${fileName}`;
             const { error: uploadError } = await supabase.storage
                 .from("order-files")
                 .upload(filePath, file);
-
             if (uploadError) throw new Error(uploadError.message || "Ошибка загрузки PDF");
 
-            // 3. Record file in DB
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
-            const { error: dbError } = await supabase.from("files").insert({
+            const { data: { session } } = await supabase.auth.getSession();
+            await supabase.from("files").insert({
                 order_id: order.id,
                 file_name: fileName,
                 file_path: filePath,
@@ -256,24 +249,26 @@
                 uploaded_by: session?.user?.id,
             });
 
-            if (dbError) throw new Error(dbError.message || "Ошибка сохранения PDF");
+            // 3. Try native share sheet (sends PDF directly to WhatsApp on mobile)
+            if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: `Заказ №${order.order_number} — ${order.company_name}`,
+                });
+            } else {
+                // 4. Fallback: download PDF to device
+                const url = URL.createObjectURL(pdfBlob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                success = "PDF скачан — перетащите его в чат WhatsApp";
+                setTimeout(() => (success = ""), 3000);
+            }
 
-            // 4. Get public URL
-            const {
-                data: { publicUrl },
-            } = supabase.storage
-                .from("order-files")
-                .getPublicUrl(filePath);
-
-            // 5. Open WhatsApp with the PDF link
-            const clean = order.phone.replace(/[^\d+]/g, "");
-            const digits = clean.startsWith("+") ? clean.slice(1) : clean;
-            const message = encodeURIComponent(
-                `Здравствуйте! Ваш заказ №${order.order_number} — ${order.company_name}\n\nPDF заказа: ${publicUrl}`,
-            );
-            window.open(`https://wa.me/${digits}?text=${message}`, "_blank");
-
-            // 6. Refresh files list
             load();
         } catch (err: any) {
             error = err.message || "Не удалось отправить PDF";
