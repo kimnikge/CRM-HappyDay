@@ -224,42 +224,57 @@
         try {
             // 1. Generate PDF blob
             const pdfBlob = generateOrderPDF(order);
-            const fileName = `Заказ_${order.order_number}_${order.company_name.replace(/[^a-zA-Zа-яА-Я0-9]/g, "_")}.pdf`;
+            // Sanitize filename: Latin/numbers only (Supabase Storage restriction)
+            const safeName = order.company_name
+                .replace(/[^a-zA-Z0-9]/g, "_")
+                .replace(/_+/g, "_")
+                .replace(/^_|_$/g, "")
+                || "order";
+            const fileName = `Order_${order.order_number}_${safeName}.pdf`;
             const file = new File([pdfBlob], fileName, {
                 type: "application/pdf",
             });
 
-            // 2. Upload to Supabase Storage via existing API
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("order_id", order.id);
+            // 2. Upload directly to Supabase Storage (browser client has auth)
+            const filePath = `${order.id}/${Date.now()}_${fileName}`;
+            const { error: uploadError } = await supabase.storage
+                .from("order-files")
+                .upload(filePath, file);
 
-            const res = await fetch("/api/files", {
-                method: "POST",
-                body: formData,
+            if (uploadError) throw new Error(uploadError.message || "Ошибка загрузки PDF");
+
+            // 3. Record file in DB
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
+            const { error: dbError } = await supabase.from("files").insert({
+                order_id: order.id,
+                file_name: fileName,
+                file_path: filePath,
+                file_size: file.size,
+                mime_type: file.type,
+                uploaded_by: session?.user?.id,
             });
 
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.error || "Ошибка загрузки PDF");
-            }
+            if (dbError) throw new Error(dbError.message || "Ошибка сохранения PDF");
 
-            const uploaded = await res.json();
-
-            // 3. Get public URL from the uploaded file path
+            // 4. Get public URL
             const {
                 data: { publicUrl },
             } = supabase.storage
                 .from("order-files")
-                .getPublicUrl(uploaded.file_path);
+                .getPublicUrl(filePath);
 
-            // 4. Open WhatsApp with the PDF link
+            // 5. Open WhatsApp with the PDF link
             const clean = order.phone.replace(/[^\d+]/g, "");
             const digits = clean.startsWith("+") ? clean.slice(1) : clean;
             const message = encodeURIComponent(
                 `Здравствуйте! Ваш заказ №${order.order_number} — ${order.company_name}\n\nPDF заказа: ${publicUrl}`,
             );
             window.open(`https://wa.me/${digits}?text=${message}`, "_blank");
+
+            // 6. Refresh files list
+            load();
         } catch (err: any) {
             error = err.message || "Не удалось отправить PDF";
         }

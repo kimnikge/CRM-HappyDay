@@ -1,8 +1,11 @@
-import { supabase } from '$lib/supabase.server';
+import { supabaseAdmin } from '$lib/supabase-admin.server';
 import { MAX_FILE_SIZE } from '$lib/schemas';
 
+// Server-side file operations use supabaseAdmin (service_role) to bypass RLS.
+// Auth is already verified by the API endpoint via requireAuth().
+
 export async function getOrderFiles(orderId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('files')
     .select('*')
     .eq('order_id', orderId)
@@ -22,14 +25,14 @@ export async function uploadFile(orderId: string, file: File, userId: string) {
   const filePath = `${orderId}/${timestamp}_${file.name}`;
 
   // Upload to Supabase Storage
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await supabaseAdmin.storage
     .from('order-files')
     .upload(filePath, file);
 
   if (uploadError) throw uploadError;
 
   // Record in DB
-  const { data, error: dbError } = await supabase
+  const { data, error: dbError } = await supabaseAdmin
     .from('files')
     .insert({
       order_id: orderId,
@@ -48,7 +51,7 @@ export async function uploadFile(orderId: string, file: File, userId: string) {
 
 export async function deleteFile(fileId: string) {
   // Get file info first
-  const { data: file } = await supabase
+  const { data: file } = await supabaseAdmin
     .from('files')
     .select('file_path')
     .eq('id', fileId)
@@ -56,10 +59,10 @@ export async function deleteFile(fileId: string) {
 
   if (file) {
     // Delete from storage
-    await supabase.storage.from('order-files').remove([file.file_path]);
+    await supabaseAdmin.storage.from('order-files').remove([file.file_path]);
   }
 
   // Delete from DB
-  const { error } = await supabase.from('files').delete().eq('id', fileId);
+  const { error } = await supabaseAdmin.from('files').delete().eq('id', fileId);
   if (error) throw error;
 }
