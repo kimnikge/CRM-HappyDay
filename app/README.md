@@ -121,12 +121,13 @@ SQL лежит в `app/supabase/migrations/`. Порядок применени�
   без прав администратора.
 - RPC `change_order_status` и `submit_order_form` — `SECURITY DEFINER` (обходят RLS),
   поэтому `EXECUTE` им выдан только `authenticated` и `service_role`.
-- service_role используется лишь на сервере (`$lib/supabase-admin.server.ts`);
-  серверные хелперы без пользовательской сессии (`$lib/supabase.server.ts`) работают
-  как `anon` и видят только публичные данные — для привилегированных операций
-  нужен admin-клиент или проброс сессии.
-- Политика `009_security_hardening.sql` меняет модель доступа: применять её нужно
-  осознанно, после проверки, что API-слой ходит в БД под нужной ролью.
+- service_role используется только на сервере (`$lib/supabase-admin.server.ts`),
+  в браузер не попадает. Все привилегированные операции идут через него либо
+  через пользовательский JWT и RLS.
+- Серверный API минимален и осознанно не дублирует клиентские запросы: остались
+  только публичная форма (`/api/form/{token}`) и удаление пользователя
+  (`DELETE /api/users/{id}`). Остальные данные страницы читают из Supabase напрямую —
+  граница доступа держится на RLS.
 
 ## Структура проекта
 
@@ -142,23 +143,21 @@ app/
 │   │   ├── login/              # вход + сброс пароля
 │   │   ├── profile/            # профиль пользователя
 │   │   ├── users/              # управление пользователями и ролями
-│   │   └── api/                # REST-эндпоинты (orders, clients, files, form, statuses, users)
+│   │   └── api/                # только /api/form/{token} и DELETE /api/users/{id}
 │   ├── lib/
 │   │   ├── components/         # Header, kanban/*, form/*, ui/*
-│   │   ├── services/           # доступ к данным (orders, clients, files)
 │   │   ├── schemas/            # Zod-схемы валидации
 │   │   ├── stores/             # auth и kanban на Svelte 5 runes
 │   │   ├── pdf/                # генерация PDF карточки заказа
 │   │   ├── utils/              # телефонные маски и пр.
 │   │   ├── config.ts           # бизнес-константы (форматы, статусы, валюта)
 │   │   ├── supabase.ts         # браузерный клиент
-│   │   ├── supabase.server.ts  # серверный anon-клиент (без сессии)
 │   │   └── supabase-admin.server.ts # service_role, только сервер
 │   ├── hooks.server.ts         # Supabase SSR-клиент в locals
 │   └── app.css                 # Tailwind 4 + дизайн-токены
 ├── static/                     # favicon, manifest, sw.js
 ├── supabase/
-│   ├── migrations/             # SQL-миграции 001–011
+│   ├── migrations/             # SQL-миграции 001–012
 │   ├── config.toml             # локальный Supabase CLI
 │   └── run-migration.mjs       # раннер миграций
 ├── vercel.json (в корне репо)  # сборка из app/
