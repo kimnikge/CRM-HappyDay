@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { supabase } from "$lib/supabase";
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
@@ -36,6 +36,27 @@
     let sendingPDF = $state(false);
     // Select статуса — двусторонний: при отмене модалки/ошибке возвращаем реальный статус заказа
     let selectedStatusId = $state<string | null>(null);
+
+    // ---- Модалка «Причина отмены»: фокус-трап, Escape, возврат фокуса на селект ----
+    let cancelModalPanel = $state<HTMLDivElement | null>(null);
+    let cancelModalTrigger = $state<HTMLElement | null>(null);
+    let wasCancelModalOpen = false;
+    /** Ссылка на <select> статуса — чтобы вернуть на него фокус после закрытия модалки. */
+    let statusSelect = $state<HTMLSelectElement | null>(null);
+
+    const FOCUSABLE =
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function focusableIn(root: HTMLElement | null): HTMLElement[] {
+        if (!root) return [];
+        return Array.from(
+            root.querySelectorAll<HTMLElement>(FOCUSABLE),
+        ).filter(
+            (el) =>
+                el.getAttribute("tabindex") !== "-1" &&
+                el.getClientRects().length > 0,
+        );
+    }
 
     const id = $derived($page.params.id);
 
@@ -252,6 +273,12 @@
         // G2: если статус «Отменён» — запросить причину
         const targetStatus = statuses.find((s) => s.id === statusId);
         if (targetStatus?.order_index === 6) {
+            // запоминаем, куда вернуть фокус после закрытия модалки
+            cancelModalTrigger =
+                statusSelect ??
+                (document.activeElement instanceof HTMLElement
+                    ? document.activeElement
+                    : null);
             pendingStatusId = statusId;
             cancelReason = "";
             showCancelReason = true;
@@ -266,6 +293,64 @@
         pendingStatusId = null;
         selectedStatusId = order?.status_id ?? null;
     }
+
+    /**
+     * Модалка причины отмены ведёт себя как диалог:
+     *  - фокус при открытии — в textarea;
+     *  - Tab/Shift+Tab циклятся внутри;
+     *  - Escape = «Отмена» (статус не меняется, селект возвращается к реальному статусу);
+     *  - после закрытия фокус возвращается на селект статуса.
+     */
+    $effect(() => {
+        if (!showCancelReason) {
+            if (!wasCancelModalOpen) return;
+            wasCancelModalOpen = false;
+            const trigger = untrack(() => cancelModalTrigger);
+            cancelModalTrigger = null;
+            if (trigger?.isConnected) trigger.focus();
+            return;
+        }
+
+        if (!cancelModalPanel) return;
+        const panel: HTMLDivElement = cancelModalPanel;
+        wasCancelModalOpen = true;
+
+        const initial = focusableIn(panel);
+        (initial[0] ?? panel).focus();
+
+        function onKeydown(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                dismissCancelModal();
+                return;
+            }
+            if (event.key !== "Tab") return;
+
+            const items = focusableIn(panel);
+            if (items.length === 0) {
+                event.preventDefault();
+                panel.focus();
+                return;
+            }
+            const first = items[0];
+            const last = items[items.length - 1];
+            const active = document.activeElement as HTMLElement | null;
+            const inside = active !== null && panel.contains(active);
+
+            if (event.shiftKey) {
+                if (!inside || active === first) {
+                    event.preventDefault();
+                    last.focus();
+                }
+            } else if (!inside || active === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+
+        document.addEventListener("keydown", onKeydown, true);
+        return () => document.removeEventListener("keydown", onKeydown, true);
+    });
 
     async function doChangeStatus(
         statusId: string,
@@ -599,6 +684,7 @@
                     {currentStatus?.name ?? "—"}
                 </span>
                 <select
+                    bind:this={statusSelect}
                     bind:value={selectedStatusId}
                     onchange={(e) =>
                         changeStatus((e.target as HTMLSelectElement).value)}
@@ -694,24 +780,25 @@
 
             <!-- G2: Cancel reason modal -->
             {#if showCancelReason}
-                <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div
-                    class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
-                    onclick={dismissCancelModal}
-                    onkeydown={(e: KeyboardEvent) => {
-                        if (e.key === "Escape") dismissCancelModal();
-                    }}
-                    role="dialog"
-                    aria-modal="true"
-                    tabindex="-1"
+                    class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
                 >
-                    <!-- svelte-ignore a11y_no_static_element_interactions -->
+                    <!-- Клик по фону = «Отмена»; пропускается Tab'ом (есть кнопки и Escape) -->
+                    <button
+                        type="button"
+                        tabindex="-1"
+                        class="absolute inset-0 w-full h-full border-0 p-0 bg-black/40 cursor-default"
+                        aria-label="Закрыть окно"
+                        onclick={dismissCancelModal}
+                    ></button>
+
                     <div
-                        class="bg-paper rounded-t-xl sm:rounded-md shadow-lg p-4 sm:p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto"
-                        onclick={(e: MouseEvent) => e.stopPropagation()}
-                        onkeydown={(e: KeyboardEvent) => {
-                            if (e.key === "Escape") e.stopPropagation();
-                        }}
+                        bind:this={cancelModalPanel}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="cancel-reason-title"
+                        tabindex="-1"
+                        class="relative z-10 bg-paper rounded-t-xl sm:rounded-md shadow-lg p-4 sm:p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto"
                     >
                         <div class="sm:hidden flex justify-center mb-2">
                             <span
@@ -719,6 +806,7 @@
                             ></span>
                         </div>
                         <h3
+                            id="cancel-reason-title"
                             class="text-base sm:text-lg font-display font-semibold text-ink mb-3"
                         >
                             Причина отмены
@@ -993,6 +1081,8 @@
                                         >
                                         <button
                                             class="text-alert hover:opacity-70 text-xs bg-transparent border-0 p-0 cursor-pointer"
+                                            aria-label={`Удалить файл ${f.file_name}`}
+                                            title="Удалить файл"
                                             onclick={() =>
                                                 deleteFile(f.id, f.file_path)}
                                             >✕</button

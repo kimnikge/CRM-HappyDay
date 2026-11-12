@@ -9,26 +9,51 @@
     let dark = $state(false);
     let menuOpen = $state(false);
 
+    /** Элементы для управления фокусом мобильного меню (модальный диалог). */
+    let burgerButton = $state<HTMLButtonElement | null>(null);
+    let menuPanel = $state<HTMLElement | null>(null);
+
+    const FOCUSABLE =
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function focusableIn(root: HTMLElement | null): HTMLElement[] {
+        if (!root) return [];
+        return Array.from(
+            root.querySelectorAll<HTMLElement>(FOCUSABLE),
+        ).filter(
+            (el) =>
+                el.getAttribute("tabindex") !== "-1" &&
+                el.getClientRects().length > 0,
+        );
+    }
+
     function toggleDark() {
         dark = !dark;
-        if (browser) {
-            document.documentElement.classList.toggle("dark", dark);
+        if (!browser) return;
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        try {
             localStorage.setItem("theme", dark ? "dark" : "light");
+        } catch {
+            // localStorage может быть недоступен (приватный режим) — тема всё равно применена
         }
     }
 
-    function toggleMenu() {
-        menuOpen = !menuOpen;
-        if (menuOpen && browser) {
-            document.body.style.overflow = "hidden";
-        } else if (browser) {
-            document.body.style.overflow = "";
-        }
+    function openMenu() {
+        if (menuOpen) return;
+        menuOpen = true;
+        if (browser) document.body.style.overflow = "hidden";
     }
 
     function closeMenu() {
+        if (!menuOpen) return;
         menuOpen = false;
         if (browser) document.body.style.overflow = "";
+    }
+
+    function toggleMenu() {
+        if (menuOpen) closeMenu();
+        else openMenu();
     }
 
     function handleNavClick() {
@@ -55,19 +80,97 @@
         await auth.signOut();
     }
 
+    /**
+     * Мобильное меню — модальный диалог:
+     *  - фокус при открытии уходит в панель, при закрытии возвращается на бургер;
+     *  - Tab/Shift+Tab циклически ходят только по элементам панели;
+     *  - Escape закрывает;
+     *  - фон (header) на время открытия помечается inert/aria-hidden.
+     * Тему применяет inline-скрипт в app.html ДО первой отрисовки, поэтому
+     * здесь мы её только читаем (для иконки/подписи) и переключаем по клику.
+     */
+    let wasOpen = false;
+    $effect(() => {
+        if (!menuOpen) {
+            if (!wasOpen) return;
+            wasOpen = false;
+            const trigger = burgerButton;
+            if (trigger?.isConnected) trigger.focus();
+            return;
+        }
+
+        if (!menuPanel) return; // панель ещё не смонтирована — эффект перезапустится
+        const panel: HTMLElement = menuPanel;
+        wasOpen = true;
+
+        const header = burgerButton?.closest("header");
+        header?.setAttribute("aria-hidden", "true");
+        header?.setAttribute("inert", "");
+
+        // начальный фокус — первый элемент панели (кнопка «Закрыть»)
+        const initial = focusableIn(panel);
+        (initial[0] ?? panel).focus();
+
+        function onKeydown(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeMenu();
+                return;
+            }
+            if (event.key !== "Tab") return;
+
+            const items = focusableIn(panel);
+            if (items.length === 0) {
+                event.preventDefault();
+                panel.focus();
+                return;
+            }
+            const first = items[0];
+            const last = items[items.length - 1];
+            const active = document.activeElement as HTMLElement | null;
+            const inside = active !== null && panel.contains(active);
+
+            if (event.shiftKey) {
+                if (!inside || active === first) {
+                    event.preventDefault();
+                    last.focus();
+                }
+            } else if (!inside || active === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+
+        document.addEventListener("keydown", onKeydown, true);
+
+        return () => {
+            document.removeEventListener("keydown", onKeydown, true);
+            header?.removeAttribute("inert");
+            header?.removeAttribute("aria-hidden");
+        };
+    });
+
     onMount(() => {
+        // Никакого применения темы здесь: класс `dark` и color-scheme уже
+        // выставил inline-скрипт из app.html. Читаем состояние для UI.
         if (browser) {
-            const saved = localStorage.getItem("theme");
-            dark =
-                saved === "dark" ||
-                (!saved &&
-                    window.matchMedia("(prefers-color-scheme: dark)").matches);
-            document.documentElement.classList.toggle("dark", dark);
+            dark = document.documentElement.classList.contains("dark");
         }
         loadPending();
         const timer = setInterval(loadPending, 30000);
+
+        // Если на мобиле открыть меню и повернуть/растянуть экран до desktop —
+        // меню перестаёт быть видимым по CSS, поэтому закрываем его, чтобы не
+        // остался заблокированным скролл body.
+        const desktopQuery = window.matchMedia("(min-width: 768px)");
+        const onViewportChange = (event: MediaQueryListEvent) => {
+            if (event.matches) closeMenu();
+        };
+        desktopQuery.addEventListener("change", onViewportChange);
+
         return () => {
             clearInterval(timer);
+            desktopQuery.removeEventListener("change", onViewportChange);
             if (browser) document.body.style.overflow = "";
         };
     });
@@ -87,7 +190,7 @@
         </a>
     </div>
 
-    <!-- Desktop navigation -->
+    <!-- Desktop navigation (same links as the mobile menu) -->
     <nav
         class="hidden md:flex items-center gap-2"
         aria-label="Основная навигация"
@@ -102,25 +205,35 @@
             </a>
         {/if}
         <a
+            href="/"
+            class="text-sm text-neutral-600 hover:text-ink no-underline whitespace-nowrap transition-colors duration-150"
+            >Заказы</a
+        >
+        <a
+            href="/orders/new"
+            class="text-sm text-neutral-600 hover:text-ink no-underline whitespace-nowrap transition-colors duration-150"
+            >Новый заказ</a
+        >
+        <a
             href="/clients"
-            class="text-sm text-neutral-500 hover:text-ink no-underline transition-colors duration-150"
+            class="text-sm text-neutral-600 hover:text-ink no-underline whitespace-nowrap transition-colors duration-150"
             >Клиенты</a
         >
         <a
             href="/calendar"
-            class="text-sm text-neutral-500 hover:text-ink no-underline transition-colors duration-150"
+            class="text-sm text-neutral-600 hover:text-ink no-underline whitespace-nowrap transition-colors duration-150"
             >Календарь</a
         >
         {#if auth.role === "admin"}
             <a
                 href="/users"
-                class="text-sm text-neutral-500 hover:text-ink no-underline transition-colors duration-150"
+                class="text-sm text-neutral-600 hover:text-ink no-underline whitespace-nowrap transition-colors duration-150"
                 >Пользователи</a
             >
         {/if}
         <a
             href="/profile"
-            class="text-sm text-neutral-500 hover:text-ink no-underline transition-colors duration-150"
+            class="text-sm text-neutral-600 hover:text-ink no-underline whitespace-nowrap transition-colors duration-150"
             >Профиль</a
         >
         <button
@@ -150,10 +263,13 @@
             </a>
         {/if}
         <button
+            bind:this={burgerButton}
             class="flex items-center justify-center w-10 h-10 bg-transparent border-0 cursor-pointer rounded-md hover:bg-neutral-100 transition-colors duration-150"
             onclick={toggleMenu}
             aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={menuOpen}
+            aria-controls={menuOpen ? "mobile-menu" : undefined}
+            aria-haspopup="dialog"
         >
             <span class="block relative w-5 h-4">
                 <span
@@ -179,35 +295,38 @@
 
 <!-- Mobile menu overlay -->
 {#if menuOpen}
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
+        id="mobile-menu"
         class="fixed inset-0 z-20 md:hidden"
-        onclick={closeMenu}
-        onkeydown={(e: KeyboardEvent) => {
-            if (e.key === "Escape") closeMenu();
-        }}
         role="dialog"
         aria-modal="true"
-        aria-label="Мобильное меню"
+        aria-labelledby="mobile-menu-title"
         tabindex="-1"
     >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
+        <!-- Backdrop: отдельная кнопка закрытия (пропускается Tab'ом — для этого есть ✕ и Escape) -->
+        <button
+            type="button"
+            tabindex="-1"
+            class="absolute inset-0 w-full h-full border-0 p-0 bg-black/30 backdrop-blur-sm cursor-default"
+            aria-label="Закрыть меню"
+            onclick={closeMenu}
+        ></button>
 
         <!-- Menu panel -->
         <nav
+            bind:this={menuPanel}
             class="absolute top-0 right-0 bottom-0 w-64 max-w-[80vw] bg-paper shadow-2xl flex flex-col animate-slide-in"
             aria-label="Мобильная навигация"
-            onclick={(e: MouseEvent) => e.stopPropagation()}
-            onkeydown={(e: KeyboardEvent) => {
-                if (e.key === "Escape") closeMenu();
-            }}
+            tabindex="-1"
         >
             <!-- Menu header -->
             <div
                 class="flex items-center justify-between px-4 py-3 border-b border-neutral-200"
             >
-                <span class="text-sm font-semibold text-ink">Меню</span>
+                <span
+                    id="mobile-menu-title"
+                    class="text-sm font-semibold text-ink">Меню</span
+                >
                 <button
                     class="flex items-center justify-center w-8 h-8 bg-transparent border-0 cursor-pointer rounded-md hover:bg-neutral-100"
                     onclick={closeMenu}

@@ -1,11 +1,36 @@
-/* ---- Google Fonts ---- */
-@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
 /* ---- Tailwind v4 ---- */
 @import 'tailwindcss';
 
 /* ---- Design tokens (generates bg-ink, text-signal, font-display, etc.) ---- */
 @import '$lib/styles/design-tokens.css';
+
+/* ---- Self-hosted Golos Text (variable TTF) ----
+   No external Google Fonts request: the font ships with the app in
+   static/fonts and is served from the same origin (works offline in the PWA).
+   font-display: swap keeps the text readable while the font loads.
+   Замечание: в файле GolosText-Regular.ttf ось wght фактически 400–900
+   (проверено по таблице fvar); объявленный диапазон 100 900 шире — браузер
+   клампит значения вне оси, поэтому 400–700 из дизайна рендерятся как есть. */
+@font-face {
+    font-family: 'Golos Text';
+    src: url('/fonts/GolosText-Regular.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---- WCAG AA: text placed on the brand orange (--color-signal) ----
+   White on #e8852c is 2.68:1 in light theme and 2.13:1 in dark theme — far
+   below the 4.5:1 required for normal text. Dark ink on the same orange gives
+   6.29:1 (light) and 7.92:1 (dark), and 4.61:1 on the --color-signal-strong
+   hover shade, so the brand hue stays as-is and only the text color changes.
+   `.bg-signal.text-white` covers Button primary, the Header counter badges and
+   any other "bg-signal + text-white" element without touching their markup.
+   This rule is intentionally unlayered so it wins over Tailwind's utilities
+   layer regardless of source order. */
+.bg-signal.text-white {
+    color: var(--color-on-signal);
+}
 
 /* ---- Mobile nav link style ---- */
 .mobile-nav-link {

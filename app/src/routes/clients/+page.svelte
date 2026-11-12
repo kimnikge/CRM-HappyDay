@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { supabase } from "$lib/supabase";
     import Header from "$lib/components/Header.svelte";
     import Button from "$lib/components/ui/Button.svelte";
@@ -20,6 +20,42 @@
     let notes = $state("");
     let formError = $state("");
     let saving = $state(false);
+
+    // ---- Модалка create/edit: фокус-трап, Escape, начальный/возвратный фокус ----
+    let modalPanel = $state<HTMLDivElement | null>(null);
+    let modalTrigger = $state<HTMLElement | null>(null);
+    let wasModalOpen = false;
+
+    const FOCUSABLE =
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function focusableIn(root: HTMLElement | null): HTMLElement[] {
+        if (!root) return [];
+        return Array.from(
+            root.querySelectorAll<HTMLElement>(FOCUSABLE),
+        ).filter(
+            (el) =>
+                el.getAttribute("tabindex") !== "-1" &&
+                el.getClientRects().length > 0,
+        );
+    }
+
+    /**
+     * Запоминаем кнопку, открывшую модалку, чтобы вернуть на неё фокус.
+     * currentTarget надёжнее document.activeElement: Safari не фокусирует
+     * кнопки по клику, и activeElement там остаётся на body.
+     */
+    function rememberTrigger(event?: Event) {
+        const currentTarget = event?.currentTarget;
+        if (currentTarget instanceof HTMLElement) {
+            modalTrigger = currentTarget;
+            return;
+        }
+        modalTrigger =
+            document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+    }
 
     const filtered = $derived(
         search
@@ -45,7 +81,8 @@
         loading = false;
     }
 
-    function openCreate() {
+    function openCreate(event?: MouseEvent) {
+        rememberTrigger(event);
         showCreate = true;
         editId = null;
         name = "";
@@ -56,7 +93,8 @@
         formError = "";
     }
 
-    function openEdit(c: any) {
+    function openEdit(c: any, event?: MouseEvent) {
+        rememberTrigger(event);
         showCreate = true;
         editId = c.id;
         name = c.name || "";
@@ -71,6 +109,64 @@
         showCreate = false;
         editId = null;
     }
+
+    /**
+     * Модалка ведёт себя как настоящий диалог:
+     *  - начальный фокус — первое поле ввода;
+     *  - Tab/Shift+Tab циклятся внутри панели;
+     *  - Escape закрывает;
+     *  - после закрытия фокус возвращается на кнопку-триггер.
+     */
+    $effect(() => {
+        if (!showCreate) {
+            if (!wasModalOpen) return;
+            wasModalOpen = false;
+            const trigger = untrack(() => modalTrigger);
+            modalTrigger = null;
+            if (trigger?.isConnected) trigger.focus();
+            return;
+        }
+
+        if (!modalPanel) return;
+        const panel: HTMLDivElement = modalPanel;
+        wasModalOpen = true;
+
+        const initial = focusableIn(panel);
+        (initial[0] ?? panel).focus();
+
+        function onKeydown(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeForm();
+                return;
+            }
+            if (event.key !== "Tab") return;
+
+            const items = focusableIn(panel);
+            if (items.length === 0) {
+                event.preventDefault();
+                panel.focus();
+                return;
+            }
+            const first = items[0];
+            const last = items[items.length - 1];
+            const active = document.activeElement as HTMLElement | null;
+            const inside = active !== null && panel.contains(active);
+
+            if (event.shiftKey) {
+                if (!inside || active === first) {
+                    event.preventDefault();
+                    last.focus();
+                }
+            } else if (!inside || active === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+
+        document.addEventListener("keydown", onKeydown, true);
+        return () => document.removeEventListener("keydown", onKeydown, true);
+    });
 
     async function save(e: SubmitEvent) {
         e.preventDefault();
@@ -206,7 +302,7 @@
                                 <td class="px-3 sm:px-4 py-2.5">
                                     <button
                                         class="text-ink hover:text-signal text-left bg-transparent border-0 p-0 cursor-pointer font-medium text-sm"
-                                        onclick={() => openEdit(c)}
+                                        onclick={(event) => openEdit(c, event)}
                                         >{c.name}</button
                                     >
                                     <!-- Show contact person inline on mobile -->
@@ -247,28 +343,26 @@
 
         <!-- Create/Edit modal -->
         {#if showCreate}
-            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
             <div
-                class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
-                onclick={closeForm}
-                onkeydown={(e: KeyboardEvent) => {
-                    if (e.key === "Escape") closeForm();
-                }}
+                bind:this={modalPanel}
                 role="dialog"
                 aria-modal="true"
+                aria-labelledby="clients-modal-title"
                 tabindex="-1"
+                class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             >
-                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <!-- Клик по фону закрывает; пропускается Tab'ом (для этого есть «Отмена» и Escape) -->
+                <button
+                    type="button"
+                    tabindex="-1"
+                    class="absolute inset-0 w-full h-full border-0 p-0 bg-black/40 cursor-default"
+                    aria-label="Закрыть окно"
+                    onclick={closeForm}
+                ></button>
+
                 <form
                     onsubmit={save}
-                    class="bg-paper rounded-t-xl sm:rounded-md shadow-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
-                    onclick={(e: MouseEvent) => e.stopPropagation()}
-                    onkeydown={(e: KeyboardEvent) => {
-                        if (e.key === "Escape") {
-                            e.stopPropagation();
-                            closeForm();
-                        }
-                    }}
+                    class="relative z-10 bg-paper rounded-t-xl sm:rounded-md shadow-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
                 >
                     <!-- Drag handle for mobile sheet -->
                     <div class="sm:hidden flex justify-center mb-2">
@@ -276,6 +370,7 @@
                         ></span>
                     </div>
                     <h3
+                        id="clients-modal-title"
                         class="text-base sm:text-lg font-display font-semibold text-ink mb-3 sm:mb-4"
                     >
                         {editId ? "Редактировать клиента" : "Новый клиент"}

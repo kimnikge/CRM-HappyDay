@@ -8,10 +8,14 @@
   /* ---- Breakpoints ---- */
   --breakpoint-xs: 30rem;
 
-  /* ---- Typography ---- */
-  --font-display: 'Golos Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body:    'Golos Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:    'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  /* ---- Typography ----
+     Golos Text is self-hosted (see @font-face in app.css), no Google Fonts CDN.
+     Inter is not shipped with the app, so the fallback goes straight to the
+     platform UI font; JetBrains Mono is not shipped either, so prose numbers
+     fall back to the OS monospace stack (look is preserved as much as possible). */
+  --font-display: 'Golos Text', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body:    'Golos Text', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Monaco, 'Cascadia Mono', 'Fira Code', monospace;
 
   /* Extra-small font size for tight mobile layouts */
   --text-2xs: 0.625rem;
@@ -21,20 +25,22 @@
   --color-ink:            #1a1d23;
   --color-steel:          #e4e6ea;
   --color-paper:          #fafaf8;
-  --color-parchment:      #faf7f2;  /* warm off-white — butcher paper */
-  --color-chalk:          #f4f1eb;  /* secondary surface — softer than parchment */
   --color-signal:         #e8852c;
   --color-signal-strong:  #c96e1c;
   --color-mint:           #2d8a6e;
   --color-alert:          #d9483b;
 
-  /* ---- Palette: Neutrals (stepped) ---- */
+  /* ---- Palette: Neutrals (stepped) ----
+     WCAG AA fixes (see app.css):
+       400 was #9ca0a8 (2.51:1 on paper) → #696e76 (4.91:1 on paper, 4.55:1 on neutral-100)
+       500 was #6b7078 (4.77:1)          → #5f646c (5.70:1) to keep the ramp monotonic
+     In dark theme 400 was #6b7078 (3.39:1 on dark bg) → #949aa2 (4.80:1 on card surface) */
   --color-neutral-50:     #faf7f2;
   --color-neutral-100:    #f4f1eb;
   --color-neutral-200:    #e4e6ea;
   --color-neutral-300:    #cdd0d5;
-  --color-neutral-400:    #9ca0a8;
-  --color-neutral-500:    #6b7078;
+  --color-neutral-400:    #696e76;
+  --color-neutral-500:    #5f646c;
   --color-neutral-600:    #4a4e55;
   --color-neutral-700:    #353840;
   --color-neutral-800:    #24272d;
@@ -69,6 +75,16 @@
 
   /* ---- Transitions ---- */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- Text color for content placed on --color-signal ----
+   White on #e8852c is only 2.68:1 (WCAG AA wants 4.5:1 for normal text).
+   Dark ink on the same orange gives 6.29:1 in light theme and 7.92:1 in dark
+   theme (and still 4.61:1 on the --color-signal-strong hover shade).
+   Declared outside @theme on purpose: this value is consumed by a plain CSS
+   rule in app.css, and Tailwind may drop @theme variables that no utility uses. */
+:root {
+  --color-on-signal: #1a1d23;
 }
 
 /* ---- Base layer ---- */
@@ -116,49 +132,8 @@
 
 /* ---- Spacing ---- */
 :root {
-  --space-1: 0.25rem;  /* 4px */
-  --space-2: 0.5rem;   /* 8px */
-  --space-3: 0.75rem;  /* 12px */
-  --space-4: 1rem;     /* 16px */
-  --space-5: 1.25rem;  /* 20px */
-  --space-6: 1.5rem;   /* 24px */
-  --space-8: 2rem;     /* 32px */
-  --space-10: 2.5rem;  /* 40px */
-  --space-12: 3rem;    /* 48px */
-
   /* Touch-friendly minimum tap target */
   --touch-target: 44px;
-}
-
-/* ---- Mobile / responsive utilities ---- */
-@utility container-page {
-  width: 100%;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: var(--space-4);
-  padding-right: var(--space-4);
-
-  @media (width >= 48rem) {
-    padding-left: var(--space-6);
-    padding-right: var(--space-6);
-  }
-}
-
-/* Horizontal scroll wrapper — shows scroll hint on mobile */
-@utility scroll-x {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-neutral-300) transparent;
-
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-neutral-300);
-    border-radius: 2px;
-  }
 }
 
 /* Responsive table — wraps in scrollable container on small screens */
@@ -219,14 +194,6 @@
   --transition-slow:   300ms ease;
 }
 
-/* ---- Z-Index ---- */
-:root {
-  --z-dropdown: 100;
-  --z-sticky:   200;
-  --z-modal:    300;
-  --z-toast:    400;
-}
-
 /* ---- G18: Dark mode ---- */
 html.dark {
   --color-ink:            #e8eaed;
@@ -241,7 +208,7 @@ html.dark {
   --color-neutral-100:    #1a1d23;
   --color-neutral-200:    #24272d;
   --color-neutral-300:    #353840;
-  --color-neutral-400:    #6b7078;
+  --color-neutral-400:    #949aa2;  /* AA: 4.80:1 on paper (#2a2e36), was #6b7078 → 3.39:1 */
   --color-neutral-500:    #9ca0a8;
   --color-neutral-600:    #cdd0d5;
   --color-neutral-700:    #e4e6ea;
@@ -253,6 +220,17 @@ html.dark {
   --color-temp-confirmed:  #5b7f95;
   --color-temp-done:       #4aad8c;
   --color-temp-cancelled:  #6b7078;
+
+  /* ---- Format tag colors: lighter shades for AA on dark surfaces ----
+     On the tag's own tinted background (15% of the color over paper #2a2e36):
+     banquet 4.53:1, furshet/buffet 4.83:1, coffee 5.24:1, cocktail 4.75:1,
+     default 4.89:1. Previously #7c3aed on dark gave 2.39–2.96:1. */
+  --color-format-banquet:  #b69cff;
+  --color-format-buffet:   #7db7ff;
+  --color-format-coffee:   #eab308;
+  --color-format-cocktail: #ff8ac6;
+  --color-format-furshet:  #7db7ff;
+  --color-format-default:  #b0b5bd;
 
   --shadow-card:       0 2px 6px rgba(0, 0, 0, 0.4);
   --shadow-card-hover: 0 4px 14px rgba(0, 0, 0, 0.5);

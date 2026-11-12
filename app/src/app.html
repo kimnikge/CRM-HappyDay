@@ -2,7 +2,8 @@
 <html lang="ru">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta name="color-scheme" content="light dark" />
 		<meta name="theme-color" content="#fafaf8" />
 		<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1d23" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
@@ -11,8 +12,31 @@
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="application-name" content="Catering CRM" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="apple-touch-icon" href="/favicon.svg" />
+		<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+		<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png" />
 		<link rel="manifest" href="/manifest.json" />
+		<!--
+			Theme bootstrap: runs synchronously in <head> BEFORE any stylesheet
+			so the correct theme class is applied before the first paint
+			(no light-theme flash on reload). Mirrors the Header theme preference:
+			localStorage "theme" ("light" | "dark"), else prefers-color-scheme.
+		-->
+		<script>
+			(() => {
+				try {
+					const stored = localStorage.getItem("theme");
+					const dark =
+						stored === "dark" ||
+						(!stored &&
+							window.matchMedia("(prefers-color-scheme: dark)").matches);
+					document.documentElement.classList.toggle("dark", dark);
+					document.documentElement.style.colorScheme = dark ? "dark" : "light";
+				} catch {
+					// localStorage can throw (private mode / blocked cookies) — keep the default light theme.
+				}
+			})();
+		</script>
 		<title>Catering CRM</title>
 		%sveltekit.head%
 	</head>

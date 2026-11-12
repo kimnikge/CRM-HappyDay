@@ -112,6 +112,7 @@
 
 <svelte:head>
     <title>Catering CRM — Заполнение формы</title>
+    <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <main class="min-h-screen bg-neutral-50">

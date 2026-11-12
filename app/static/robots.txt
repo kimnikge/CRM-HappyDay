@@ -1,3 +1,13 @@
-# allow crawling everything by default
+# Public app shell may be indexed, but private and one-time-token pages must not
+# end up in search engines (the /form/ tokens are single-use and personal).
+
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /form/
+Disallow: /orders/
+Disallow: /clients/
+Disallow: /users/
+Disallow: /profile/
+Disallow: /calendar/
+Disallow: /login
+Disallow: /api/
