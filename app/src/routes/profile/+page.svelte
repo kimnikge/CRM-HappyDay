@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import { supabase } from "$lib/supabase";
     import { auth } from "$lib/stores/auth.svelte";
+    import { toasts } from "$lib/stores/toasts.svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import Input from "$lib/components/ui/Input.svelte";
 
@@ -9,8 +10,8 @@
     let phone = $state("");
     let loading = $state(true);
     let saving = $state(false);
+    // error — только ошибка загрузки страницы; ошибки сохранения — toast
     let error = $state("");
-    let success = $state("");
 
     async function load() {
         await auth.waitForInit();
@@ -38,12 +39,13 @@
     async function save(e: SubmitEvent) {
         e.preventDefault();
         saving = true;
-        error = "";
-        success = "";
 
         await auth.waitForInit();
         if (!auth.session?.user?.id) {
-            error = "Сессия не найдена. Войдите заново, чтобы сохранить профиль.";
+            toasts.push(
+                "Сессия не найдена. Войдите заново, чтобы сохранить профиль.",
+                "error",
+            );
             saving = false;
             return;
         }
@@ -55,13 +57,15 @@
             .select("id");
 
         if (err) {
-            error = err.message;
+            toasts.push(`Не удалось сохранить профиль: ${err.message}`, "error");
         } else if (!data || data.length === 0) {
-            error =
-                "Профиль не найден — изменения не сохранены. Обновите страницу или войдите заново.";
+            toasts.push(
+                "Профиль не найден — изменения не сохранены. Обновите страницу или войдите заново.",
+                "error",
+            );
         } else {
-            success = "Сохранено";
-            setTimeout(() => (success = ""), 2000);
+            error = "";
+            toasts.push("Профиль сохранён");
         }
         saving = false;
     }
@@ -85,13 +89,6 @@
                     class="rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert"
                 >
                     {error}
-                </div>
-            {/if}
-            {#if success}
-                <div
-                    class="rounded-md bg-mint/10 border border-mint/20 p-3 text-sm text-mint"
-                >
-                    {success}
                 </div>
             {/if}
 

@@ -3,6 +3,7 @@
 	import { browser } from "$app/environment";
 	import { page } from "$app/state";
 	import Header from "$lib/components/Header.svelte";
+	import ToastHost from "$lib/components/ui/ToastHost.svelte";
 	import "../app.css";
 
 	let { children } = $props();
@@ -139,3 +140,6 @@
 		</button>
 	</div>
 {/if}
+
+<!-- Глобальные toast-уведомления (один экземпляр на всё приложение) -->
+<ToastHost raised={updateReady} />

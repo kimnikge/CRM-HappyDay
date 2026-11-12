@@ -2,13 +2,12 @@
     import { onMount } from "svelte";
     import { supabase } from "$lib/supabase";
     import { auth } from "$lib/stores/auth.svelte";
+    import { toasts } from "$lib/stores/toasts.svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import { goto } from "$app/navigation";
 
     let users = $state<any[]>([]);
     let loading = $state(true);
-    let error = $state("");
-    let success = $state("");
 
     async function load() {
         const { data } = await supabase
@@ -20,23 +19,20 @@
     }
 
     async function toggleRole(userId: string, newRole: string) {
-        error = "";
-        success = "";
-
         const { error: err } = await supabase
             .from("profiles")
             .update({ role: newRole })
             .eq("id", userId);
 
         if (err) {
-            error = `Не удалось изменить роль: ${err.message}`;
+            toasts.push(`Не удалось изменить роль: ${err.message}`, "error");
         } else {
-            success =
+            toasts.push(
                 newRole === "admin"
                     ? "Пользователь активирован"
-                    : "Пользователь отключён";
+                    : "Пользователь отключён",
+            );
             await load();
-            setTimeout(() => (success = ""), 3000);
         }
     }
 
@@ -56,9 +52,13 @@
         const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
         if (!res.ok) {
             const body = await res.json().catch(() => ({}));
-            error = body.error || "Ошибка удаления";
+            toasts.push(
+                body.error || "Не удалось удалить пользователя",
+                "error",
+            );
         } else {
-            load();
+            toasts.push(`Пользователь «${userName}» удалён`);
+            await load();
         }
     }
 
@@ -78,24 +78,6 @@
     >
         Пользователи
     </h2>
-
-    {#if error}
-        <div
-            class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert"
-            role="alert"
-        >
-            {error}
-        </div>
-    {/if}
-
-    {#if success}
-        <div
-            class="mb-4 rounded-md bg-mint/10 border border-mint/20 p-3 text-sm text-mint"
-            role="status"
-        >
-            {success}
-        </div>
-    {/if}
 
     {#if loading}
         <p class="text-sm text-neutral-400 py-10 text-center">
