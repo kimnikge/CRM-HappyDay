@@ -19,6 +19,7 @@
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.3.1",
 		"@types/ws": "^8.18.2",
+		"pg": "^8.22.0",
 		"svelte": "^5.57.3",
 		"svelte-check": "^4.6.0",
 		"tailwindcss": "^4.3.1",
@@ -27,11 +28,9 @@
 		"vitest": "^4.1.12"
 	},
 	"dependencies": {
-		"@fontsource-variable/golos-text": "^5.2.8",
 		"@supabase/ssr": "^0.12.0",
 		"@supabase/supabase-js": "^2.108.2",
 		"jspdf": "^4.2.1",
-		"pg": "^8.22.0",
 		"ws": "^8.21.0",
 		"zod": "^4.6.7"
 	},
