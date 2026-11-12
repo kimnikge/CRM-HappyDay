@@ -3,7 +3,6 @@
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
     import { supabase } from "$lib/supabase";
-    import Header from "$lib/components/Header.svelte";
     import KanbanBoard from "$lib/components/kanban/KanbanBoard.svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import { kanban } from "$lib/stores/kanban.svelte";
@@ -169,215 +168,211 @@
     });
 </script>
 
-<main class="min-h-screen bg-neutral-50">
-    <Header />
-
-    <!-- Init error (Supabase unreachable, etc.) -->
-    {#if initError}
-        <div class="flex flex-col items-center justify-center py-20 gap-4 px-4">
-            <div
-                class="rounded-md bg-alert/10 border border-alert/20 p-6 max-w-md text-center"
+<!-- Init error (Supabase unreachable, etc.) -->
+{#if initError}
+    <div class="flex flex-col items-center justify-center py-20 gap-4 px-4">
+        <div
+            class="rounded-md bg-alert/10 border border-alert/20 p-6 max-w-md text-center"
+        >
+            <p class="text-alert font-medium mb-2">Ошибка подключения</p>
+            <p class="text-sm text-neutral-600 mb-4">{initError}</p>
+            <Button
+                variant="secondary"
+                onclick={() => {
+                    initError = null;
+                    init();
+                }}
             >
-                <p class="text-alert font-medium mb-2">Ошибка подключения</p>
-                <p class="text-sm text-neutral-600 mb-4">{initError}</p>
-                <Button
-                    variant="secondary"
-                    onclick={() => {
-                        initError = null;
-                        init();
-                    }}
+                Попробовать снова
+            </Button>
+        </div>
+    </div>
+{:else}
+    <!-- Toolbar -->
+    <div
+        class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 border-b border-neutral-200 bg-paper/90 backdrop-blur px-3 sm:px-6 py-2.5"
+    >
+        <div class="flex flex-wrap items-center gap-2 flex-1">
+            <input
+                type="search"
+                bind:value={searchInput}
+                oninput={handleSearch}
+                placeholder="Поиск..."
+                class="w-full sm:w-48 md:w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body placeholder:text-neutral-400
+                   focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
+                   transition-colors duration-150"
+            />
+            <input
+                type="date"
+                onchange={handleDateFilter}
+                class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body
+                   focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
+                   transition-colors duration-150"
+            />
+            <select
+                value={selectedManager}
+                onchange={handleManagerFilter}
+                class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body max-w-36
+                   focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
+                   transition-colors duration-150"
+            >
+                <option value="">Все менеджеры</option>
+                {#each managers as m}
+                    <option value={m.id}>{m.initials || m.full_name}</option
+                    >
+                {/each}
+            </select>
+            <select
+                value={sortByVal}
+                onchange={handleSortChange}
+                class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body
+                   focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
+                   transition-colors duration-150"
+            >
+                <option value="created_at">По созданию</option>
+                <option value="event_date">По мероприятию</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onclick={exportCSV}>
+                CSV
+            </Button>
+            <Button href="/orders/new">+ Создать</Button>
+        </div>
+        <!-- Status-change error surfaced from the store -->
+        {#if kanban.statusError}
+            <div
+                class="w-full flex items-center gap-2 text-xs text-alert"
+                role="alert"
+            >
+                <span>{kanban.statusError}</span>
+                <button
+                    type="button"
+                    class="bg-transparent border-0 p-0 cursor-pointer text-alert underline text-xs"
+                    onclick={() => kanban.clearStatusError()}
                 >
+                    Скрыть
+                </button>
+            </div>
+        {/if}
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="p-2 sm:p-4">
+        {#if kanban.loading}
+            <div class="flex items-center justify-center py-20">
+                <p class="text-sm text-neutral-500 animate-pulse">
+                    Загрузка заказов...
+                </p>
+            </div>
+        {:else if kanban.error}
+            <div
+                class="flex flex-col items-center justify-center py-20 gap-3"
+            >
+                <p class="text-sm text-alert">{kanban.error}</p>
+                <Button variant="secondary" onclick={() => kanban.retry()}>
                     Попробовать снова
                 </Button>
             </div>
-        </div>
-    {:else}
-        <!-- Toolbar -->
-        <div
-            class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 border-b border-neutral-200 bg-paper/90 backdrop-blur px-3 sm:px-6 py-2.5"
-        >
-            <div class="flex flex-wrap items-center gap-2 flex-1">
-                <input
-                    type="search"
-                    bind:value={searchInput}
-                    oninput={handleSearch}
-                    placeholder="Поиск..."
-                    class="w-full sm:w-48 md:w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-body placeholder:text-neutral-400
-                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
-                       transition-colors duration-150"
-                />
-                <input
-                    type="date"
-                    onchange={handleDateFilter}
-                    class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body
-                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
-                       transition-colors duration-150"
-                />
-                <select
-                    value={selectedManager}
-                    onchange={handleManagerFilter}
-                    class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body max-w-36
-                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
-                       transition-colors duration-150"
+        {:else if kanban.statuses.length === 0}
+            <div
+                class="flex flex-col items-center justify-center py-20 gap-3"
+            >
+                <p class="text-sm text-neutral-500">
+                    Нет статусов для отображения
+                </p>
+                <Button variant="secondary" href="/orders/new"
+                    >Создать первый заказ</Button
                 >
-                    <option value="">Все менеджеры</option>
-                    {#each managers as m}
-                        <option value={m.id}>{m.initials || m.full_name}</option
-                        >
-                    {/each}
-                </select>
-                <select
-                    value={sortByVal}
-                    onchange={handleSortChange}
-                    class="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm font-body
-                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink hover:border-neutral-400
-                       transition-colors duration-150"
-                >
-                    <option value="created_at">По созданию</option>
-                    <option value="event_date">По мероприятию</option>
-                </select>
             </div>
-            <div class="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onclick={exportCSV}>
-                    CSV
-                </Button>
-                <Button href="/orders/new">+ Создать</Button>
-            </div>
-            <!-- Status-change error surfaced from the store -->
-            {#if kanban.statusError}
+        {:else}
+            <!-- G22: Quick stats -->
+            <div
+                class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4"
+            >
                 <div
-                    class="w-full flex items-center gap-2 text-xs text-alert"
-                    role="alert"
+                    class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                 >
-                    <span>{kanban.statusError}</span>
-                    <button
-                        type="button"
-                        class="bg-transparent border-0 p-0 cursor-pointer text-alert underline text-xs"
-                        onclick={() => kanban.clearStatusError()}
+                    <p class="text-2xs sm:text-xs text-neutral-500">
+                        Всего
+                    </p>
+                    <p
+                        class="text-base sm:text-lg font-display font-semibold text-ink"
                     >
-                        Скрыть
-                    </button>
-                </div>
-            {/if}
-        </div>
-
-        <!-- Kanban Board -->
-        <div class="p-2 sm:p-4">
-            {#if kanban.loading}
-                <div class="flex items-center justify-center py-20">
-                    <p class="text-sm text-neutral-500 animate-pulse">
-                        Загрузка заказов...
+                        {kanban.orders.length}
                     </p>
                 </div>
-            {:else if kanban.error}
                 <div
-                    class="flex flex-col items-center justify-center py-20 gap-3"
+                    class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                 >
-                    <p class="text-sm text-alert">{kanban.error}</p>
-                    <Button variant="secondary" onclick={() => kanban.retry()}>
-                        Попробовать снова
+                    <p class="text-2xs sm:text-xs text-neutral-500">
+                        В работе
+                    </p>
+                    <p
+                        class="text-base sm:text-lg font-display font-semibold text-signal"
+                    >
+                        {activeOrders}
+                    </p>
+                </div>
+                <div
+                    class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
+                >
+                    <p class="text-2xs sm:text-xs text-neutral-500">
+                        За месяц
+                    </p>
+                    <p
+                        class="text-base sm:text-lg font-display font-semibold text-ink"
+                    >
+                        {thisMonthOrders}
+                    </p>
+                </div>
+                <div
+                    class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
+                >
+                    <p class="text-2xs sm:text-xs text-neutral-500">
+                        Сумма загруженных
+                    </p>
+                    <p
+                        class="text-base sm:text-lg font-display font-semibold text-mint"
+                    >
+                        {fmtCurrency(totalRevenue)}
+                    </p>
+                </div>
+            </div>
+            <!-- Pending filter notice -->
+            {#if pendingFilter}
+                <div class="flex items-center gap-2 mb-3 px-1">
+                    <span class="text-sm text-signal font-medium"
+                        >📋 На согласовании</span
+                    >
+                    <a
+                        href="/"
+                        class="text-xs text-neutral-400 hover:text-neutral-600 no-underline transition-colors duration-150"
+                    >
+                        ✕ Сбросить
+                    </a>
+                </div>
+            {/if}
+            <KanbanBoard
+                statuses={kanban.statuses}
+                orders={filteredOrders}
+                onCardClick={handleCardClick}
+                onStatusChange={handleStatusChange}
+            />
+            <!-- G9: Pagination -->
+            {#if kanban.hasMore && !pendingFilter}
+                <div class="flex justify-center mt-4 pb-4">
+                    <Button
+                        variant="secondary"
+                        onclick={() => kanban.nextPage()}
+                    >
+                        Загрузить ещё
                     </Button>
                 </div>
-            {:else if kanban.statuses.length === 0}
-                <div
-                    class="flex flex-col items-center justify-center py-20 gap-3"
-                >
-                    <p class="text-sm text-neutral-500">
-                        Нет статусов для отображения
-                    </p>
-                    <Button variant="secondary" href="/orders/new"
-                        >Создать первый заказ</Button
-                    >
-                </div>
-            {:else}
-                <!-- G22: Quick stats -->
-                <div
-                    class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4"
-                >
-                    <div
-                        class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
-                    >
-                        <p class="text-2xs sm:text-xs text-neutral-500">
-                            Всего
-                        </p>
-                        <p
-                            class="text-base sm:text-lg font-display font-semibold text-ink"
-                        >
-                            {kanban.orders.length}
-                        </p>
-                    </div>
-                    <div
-                        class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
-                    >
-                        <p class="text-2xs sm:text-xs text-neutral-500">
-                            В работе
-                        </p>
-                        <p
-                            class="text-base sm:text-lg font-display font-semibold text-signal"
-                        >
-                            {activeOrders}
-                        </p>
-                    </div>
-                    <div
-                        class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
-                    >
-                        <p class="text-2xs sm:text-xs text-neutral-500">
-                            За месяц
-                        </p>
-                        <p
-                            class="text-base sm:text-lg font-display font-semibold text-ink"
-                        >
-                            {thisMonthOrders}
-                        </p>
-                    </div>
-                    <div
-                        class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
-                    >
-                        <p class="text-2xs sm:text-xs text-neutral-500">
-                            Сумма загруженных
-                        </p>
-                        <p
-                            class="text-base sm:text-lg font-display font-semibold text-mint"
-                        >
-                            {fmtCurrency(totalRevenue)}
-                        </p>
-                    </div>
-                </div>
-                <!-- Pending filter notice -->
-                {#if pendingFilter}
-                    <div class="flex items-center gap-2 mb-3 px-1">
-                        <span class="text-sm text-signal font-medium"
-                            >📋 На согласовании</span
-                        >
-                        <a
-                            href="/"
-                            class="text-xs text-neutral-400 hover:text-neutral-600 no-underline transition-colors duration-150"
-                        >
-                            ✕ Сбросить
-                        </a>
-                    </div>
-                {/if}
-                <KanbanBoard
-                    statuses={kanban.statuses}
-                    orders={filteredOrders}
-                    onCardClick={handleCardClick}
-                    onStatusChange={handleStatusChange}
-                />
-                <!-- G9: Pagination -->
-                {#if kanban.hasMore && !pendingFilter}
-                    <div class="flex justify-center mt-4 pb-4">
-                        <Button
-                            variant="secondary"
-                            onclick={() => kanban.nextPage()}
-                        >
-                            Загрузить ещё
-                        </Button>
-                    </div>
-                {/if}
-                <div class="text-center text-xs text-neutral-400 pb-4">
-                    Показано {filteredOrders.length} заказов
-                </div>
             {/if}
-        </div>
-    {/if}
-</main>
+            <div class="text-center text-xs text-neutral-400 pb-4">
+                Показано {filteredOrders.length} заказов
+            </div>
+        {/if}
+    </div>
+{/if}

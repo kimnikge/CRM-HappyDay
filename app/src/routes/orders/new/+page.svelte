@@ -2,7 +2,6 @@
     import { onMount } from "svelte";
     import { supabase } from "$lib/supabase";
     import { goto } from "$app/navigation";
-    import Header from "$lib/components/Header.svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import Input from "$lib/components/ui/Input.svelte";
     import Select from "$lib/components/ui/Select.svelte";
@@ -206,85 +205,81 @@
     });
 </script>
 
-<main class="min-h-screen bg-neutral-50">
-    <Header />
+<div class="mx-auto max-w-2xl px-3 sm:px-6 py-4 sm:py-6">
+    <button
+        onclick={() => goto("/")}
+        class="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink mb-3 sm:mb-4 cursor-pointer bg-transparent border-0 p-0 transition-colors duration-150"
+    >
+        ← Назад к заказам
+    </button>
+    <h2
+        class="mb-4 sm:mb-6 text-lg sm:text-xl font-display font-semibold text-ink"
+    >
+        Новый заказ
+    </h2>
 
-    <div class="mx-auto max-w-2xl px-3 sm:px-6 py-4 sm:py-6">
-        <button
-            onclick={() => goto("/")}
-            class="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink mb-3 sm:mb-4 cursor-pointer bg-transparent border-0 p-0 transition-colors duration-150"
-        >
-            ← Назад к заказам
-        </button>
-        <h2
-            class="mb-4 sm:mb-6 text-lg sm:text-xl font-display font-semibold text-ink"
-        >
-            Новый заказ
-        </h2>
-
-        {#if error}
-            <div
-                class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert"
-                role="alert"
-            >
-                {error}
-            </div>
-        {/if}
-
+    {#if error}
         <div
-            class="space-y-3 sm:space-y-4 rounded-md bg-paper p-4 sm:p-6 shadow-card border border-neutral-200/60"
+            class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert"
+            role="alert"
         >
-            <!-- Client -->
+            {error}
+        </div>
+    {/if}
+
+    <div
+        class="space-y-3 sm:space-y-4 rounded-md bg-paper p-4 sm:p-6 shadow-card border border-neutral-200/60"
+    >
+        <!-- Client -->
+        <Select
+            label="Клиент (существующий)"
+            bind:value={clientId}
+            placeholder="— Новый клиент —"
+            options={clients.map((c: any) => ({
+                value: c.id,
+                label: c.name,
+            }))}
+        />
+
+        <Input
+            label="Название компании / ФИО"
+            bind:value={companyName}
+            required
+            placeholder="ООО «Компания» или Иванов Иван"
+        />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="Контактное лицо" bind:value={contactPerson} />
+            <Input label="Телефон" bind:value={phone} phone />
+        </div>
+
+        <Input label="Email" type="email" bind:value={email} />
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Input
+                label="Дата мероприятия"
+                type="date"
+                bind:value={eventDate}
+            />
             <Select
-                label="Клиент (существующий)"
-                bind:value={clientId}
-                placeholder="— Новый клиент —"
-                options={clients.map((c: any) => ({
-                    value: c.id,
-                    label: c.name,
+                label="Формат"
+                bind:value={format}
+                placeholder="—"
+                options={formats.map((f: string) => ({
+                    value: f,
+                    label: f,
                 }))}
             />
-
             <Input
-                label="Название компании / ФИО"
-                bind:value={companyName}
-                required
-                placeholder="ООО «Компания» или Иванов Иван"
+                label="Гостей"
+                type="number"
+                bind:value={guestCount}
+                min={1}
             />
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input label="Контактное лицо" bind:value={contactPerson} />
-                <Input label="Телефон" bind:value={phone} phone />
-            </div>
-
-            <Input label="Email" type="email" bind:value={email} />
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Input
-                    label="Дата мероприятия"
-                    type="date"
-                    bind:value={eventDate}
-                />
-                <Select
-                    label="Формат"
-                    bind:value={format}
-                    placeholder="—"
-                    options={formats.map((f: string) => ({
-                        value: f,
-                        label: f,
-                    }))}
-                />
-                <Input
-                    label="Гостей"
-                    type="number"
-                    bind:value={guestCount}
-                    min={1}
-                />
-            </div>
-
-            <Button variant="primary" full onclick={create} {loading}>
-                {loading ? "Создание..." : "Создать заказ"}
-            </Button>
         </div>
+
+        <Button variant="primary" full onclick={create} {loading}>
+            {loading ? "Создание..." : "Создать заказ"}
+        </Button>
     </div>
-</main>
+</div>

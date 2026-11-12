@@ -3,7 +3,6 @@
     import { supabase } from "$lib/supabase";
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
-    import Header from "$lib/components/Header.svelte";
     import FormSection from "$lib/components/form/FormSection.svelte";
     import FormField from "$lib/components/form/FormField.svelte";
     import Button from "$lib/components/ui/Button.svelte";
@@ -663,666 +662,662 @@
     onMount(load);
 </script>
 
-<main class="min-h-screen bg-neutral-50">
-    <Header />
-
-    {#if order}
-        <!-- Snippets -->
-        {#snippet statusPill()}
-            {@const currentStatus = statuses.find(
-                (s) => s.id === order.status_id,
-            )}
-            {@const idx = currentStatus?.order_index ?? 0}
-            <div class="flex items-center gap-1.5">
+{#if order}
+    <!-- Snippets -->
+    {#snippet statusPill()}
+        {@const currentStatus = statuses.find(
+            (s) => s.id === order.status_id,
+        )}
+        {@const idx = currentStatus?.order_index ?? 0}
+        <div class="flex items-center gap-1.5">
+            <span
+                class={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusTempClass(idx)}`}
+            >
                 <span
-                    class={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusTempClass(idx)}`}
-                >
-                    <span
-                        class={`inline-block h-1.5 w-1.5 rounded-full ${idx === 3 || idx === 4 ? "bg-signal animate-pulse" : "bg-current opacity-40"}`}
-                        aria-hidden="true"
-                    ></span>
-                    {currentStatus?.name ?? "—"}
-                </span>
-                <select
-                    bind:this={statusSelect}
-                    bind:value={selectedStatusId}
-                    onchange={(e) =>
-                        changeStatus((e.target as HTMLSelectElement).value)}
-                    class="rounded-md border border-neutral-300 px-2 py-1 text-xs font-body
-                           focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink
-                           hover:border-neutral-400 transition-colors duration-150 bg-paper"
-                    aria-label="Изменить статус заказа"
-                >
-                    {#each statuses as s}
-                        <option value={s.id}>{s.name}</option>
-                    {/each}
-                </select>
-            </div>
-        {/snippet}
-
-        <div class="mx-auto max-w-4xl px-3 sm:px-6 py-4 sm:py-6">
-            <button
-                onclick={() => goto("/")}
-                class="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink mb-3 sm:mb-4 cursor-pointer bg-transparent border-0 p-0 transition-colors duration-150"
-            >
-                ← Назад к заказам
-            </button>
-            <!-- Header -->
-            <div
-                class="mb-4 sm:mb-6 rounded-lg bg-paper shadow-card border border-neutral-200/60 overflow-hidden"
-            >
-                <!-- Format accent bar -->
-                <div
-                    class={`h-1 w-full ${order.format ? getFormatAccent(order.format) : "bg-neutral-300"}`}
+                    class={`inline-block h-1.5 w-1.5 rounded-full ${idx === 3 || idx === 4 ? "bg-signal animate-pulse" : "bg-current opacity-40"}`}
                     aria-hidden="true"
-                ></div>
-                <div class="p-3 sm:p-4">
-                    <div
-                        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                    >
-                        <div>
-                            <h2
-                                class="text-lg sm:text-xl font-display font-semibold text-ink"
-                            >
-                                Заказ №{order.order_number}
-                            </h2>
-                            <p class="text-sm text-neutral-500">
-                                {order.company_name}
-                            </p>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <!-- Status pill -->
-                            {@render statusPill()}
-                            <!-- G1: Form link + WhatsApp -->
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                {#if order.form_token}
-                                    {#if order.form_submitted}
-                                        <span
-                                            class="text-xs text-mint bg-mint/10 rounded px-2 py-1 inline-flex items-center gap-1"
-                                        >
-                                            <span class="text-[10px]">✓</span>
-                                            Заполнена
-                                        </span>
-                                    {:else}
-                                        <button
-                                            class="text-xs text-signal hover:underline bg-signal/8 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150"
-                                            onclick={copyFormLink}
-                                            title="Скопировать ссылку на форму"
-                                        >
-                                            {formLinkCopied
-                                                ? "Скопировано ✓"
-                                                : "📋 Форма"}
-                                        </button>
-                                    {/if}
-                                {/if}
-                                {#if order.phone}
-                                    <button
-                                        class="text-xs text-green-600 hover:underline bg-green-50 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150"
-                                        onclick={openWhatsApp}
-                                        title="Написать в WhatsApp"
+                ></span>
+                {currentStatus?.name ?? "—"}
+            </span>
+            <select
+                bind:this={statusSelect}
+                bind:value={selectedStatusId}
+                onchange={(e) =>
+                    changeStatus((e.target as HTMLSelectElement).value)}
+                class="rounded-md border border-neutral-300 px-2 py-1 text-xs font-body
+                       focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink
+                       hover:border-neutral-400 transition-colors duration-150 bg-paper"
+                aria-label="Изменить статус заказа"
+            >
+                {#each statuses as s}
+                    <option value={s.id}>{s.name}</option>
+                {/each}
+            </select>
+        </div>
+    {/snippet}
+
+    <div class="mx-auto max-w-4xl px-3 sm:px-6 py-4 sm:py-6">
+        <button
+            onclick={() => goto("/")}
+            class="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink mb-3 sm:mb-4 cursor-pointer bg-transparent border-0 p-0 transition-colors duration-150"
+        >
+            ← Назад к заказам
+        </button>
+        <!-- Header -->
+        <div
+            class="mb-4 sm:mb-6 rounded-lg bg-paper shadow-card border border-neutral-200/60 overflow-hidden"
+        >
+            <!-- Format accent bar -->
+            <div
+                class={`h-1 w-full ${order.format ? getFormatAccent(order.format) : "bg-neutral-300"}`}
+                aria-hidden="true"
+            ></div>
+            <div class="p-3 sm:p-4">
+                <div
+                    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                >
+                    <div>
+                        <h2
+                            class="text-lg sm:text-xl font-display font-semibold text-ink"
+                        >
+                            Заказ №{order.order_number}
+                        </h2>
+                        <p class="text-sm text-neutral-500">
+                            {order.company_name}
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Status pill -->
+                        {@render statusPill()}
+                        <!-- G1: Form link + WhatsApp -->
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            {#if order.form_token}
+                                {#if order.form_submitted}
+                                    <span
+                                        class="text-xs text-mint bg-mint/10 rounded px-2 py-1 inline-flex items-center gap-1"
                                     >
-                                        💬 WA
-                                    </button>
+                                        <span class="text-[10px]">✓</span>
+                                        Заполнена
+                                    </span>
+                                {:else}
                                     <button
-                                        class="text-xs text-ink hover:underline bg-neutral-100 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150 disabled:opacity-40"
-                                        onclick={sendPDFToWhatsApp}
-                                        disabled={sendingPDF}
-                                        title="Отправить PDF заказа в WhatsApp"
+                                        class="text-xs text-signal hover:underline bg-signal/8 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150"
+                                        onclick={copyFormLink}
+                                        title="Скопировать ссылку на форму"
                                     >
-                                        {sendingPDF ? "⏳" : "📄"} PDF
+                                        {formLinkCopied
+                                            ? "Скопировано ✓"
+                                            : "📋 Форма"}
                                     </button>
                                 {/if}
-                            </div>
+                            {/if}
+                            {#if order.phone}
+                                <button
+                                    class="text-xs text-green-600 hover:underline bg-green-50 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150"
+                                    onclick={openWhatsApp}
+                                    title="Написать в WhatsApp"
+                                >
+                                    💬 WA
+                                </button>
+                                <button
+                                    class="text-xs text-ink hover:underline bg-neutral-100 rounded px-2 py-1 cursor-pointer border-0 transition-colors duration-150 disabled:opacity-40"
+                                    onclick={sendPDFToWhatsApp}
+                                    disabled={sendingPDF}
+                                    title="Отправить PDF заказа в WhatsApp"
+                                >
+                                    {sendingPDF ? "⏳" : "📄"} PDF
+                                </button>
+                            {/if}
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- G2: Cancel reason modal -->
-            {#if showCancelReason}
+        <!-- G2: Cancel reason modal -->
+        {#if showCancelReason}
+            <div
+                class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            >
+                <!-- Клик по фону = «Отмена»; пропускается Tab'ом (есть кнопки и Escape) -->
+                <button
+                    type="button"
+                    tabindex="-1"
+                    class="absolute inset-0 w-full h-full border-0 p-0 bg-black/40 cursor-default"
+                    aria-label="Закрыть окно"
+                    onclick={dismissCancelModal}
+                ></button>
+
                 <div
-                    class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+                    bind:this={cancelModalPanel}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="cancel-reason-title"
+                    tabindex="-1"
+                    class="relative z-10 bg-paper rounded-t-xl sm:rounded-md shadow-lg p-4 sm:p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto"
                 >
-                    <!-- Клик по фону = «Отмена»; пропускается Tab'ом (есть кнопки и Escape) -->
-                    <button
-                        type="button"
-                        tabindex="-1"
-                        class="absolute inset-0 w-full h-full border-0 p-0 bg-black/40 cursor-default"
-                        aria-label="Закрыть окно"
-                        onclick={dismissCancelModal}
-                    ></button>
-
-                    <div
-                        bind:this={cancelModalPanel}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="cancel-reason-title"
-                        tabindex="-1"
-                        class="relative z-10 bg-paper rounded-t-xl sm:rounded-md shadow-lg p-4 sm:p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto"
+                    <div class="sm:hidden flex justify-center mb-2">
+                        <span
+                            class="block w-10 h-1 rounded-full bg-neutral-300"
+                        ></span>
+                    </div>
+                    <h3
+                        id="cancel-reason-title"
+                        class="text-base sm:text-lg font-display font-semibold text-ink mb-3"
                     >
-                        <div class="sm:hidden flex justify-center mb-2">
-                            <span
-                                class="block w-10 h-1 rounded-full bg-neutral-300"
-                            ></span>
-                        </div>
-                        <h3
-                            id="cancel-reason-title"
-                            class="text-base sm:text-lg font-display font-semibold text-ink mb-3"
+                        Причина отмены
+                    </h3>
+                    <textarea
+                        bind:value={cancelReason}
+                        class="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm font-body placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink mb-4"
+                        rows={3}
+                        placeholder="Укажите причину отмены заказа..."
+                    ></textarea>
+                    <div class="flex gap-2 justify-end">
+                        <button
+                            class="px-4 py-2 text-sm text-neutral-600 hover:text-ink bg-transparent border-0 cursor-pointer rounded-md hover:bg-neutral-100 transition-colors duration-150"
+                            onclick={dismissCancelModal}
+                            >Отмена</button
                         >
-                            Причина отмены
-                        </h3>
-                        <textarea
-                            bind:value={cancelReason}
-                            class="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm font-body placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-ink/15 focus:border-ink mb-4"
-                            rows={3}
-                            placeholder="Укажите причину отмены заказа..."
-                        ></textarea>
-                        <div class="flex gap-2 justify-end">
-                            <button
-                                class="px-4 py-2 text-sm text-neutral-600 hover:text-ink bg-transparent border-0 cursor-pointer rounded-md hover:bg-neutral-100 transition-colors duration-150"
-                                onclick={dismissCancelModal}
-                                >Отмена</button
-                            >
-                            <button
-                                class="px-4 py-2 text-sm text-white bg-alert hover:opacity-90 border-0 cursor-pointer rounded-md font-medium transition-colors duration-150"
-                                onclick={confirmCancel}>Отменить заказ</button
-                            >
-                        </div>
+                        <button
+                            class="px-4 py-2 text-sm text-white bg-alert hover:opacity-90 border-0 cursor-pointer rounded-md font-medium transition-colors duration-150"
+                            onclick={confirmCancel}>Отменить заказ</button
+                        >
                     </div>
                 </div>
-            {/if}
+            </div>
+        {/if}
 
-            {#if error}
-                <div
-                    class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert"
-                    role="alert"
-                >
-                    {error}
-                </div>
-            {/if}
-            {#if success}
-                <div
-                    class="mb-4 rounded-md bg-mint/10 border border-mint/20 p-3 text-sm text-mint"
-                >
-                    {success}
-                </div>
-            {/if}
+        {#if error}
+            <div
+                class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert"
+                role="alert"
+            >
+                {error}
+            </div>
+        {/if}
+        {#if success}
+            <div
+                class="mb-4 rounded-md bg-mint/10 border border-mint/20 p-3 text-sm text-mint"
+            >
+                {success}
+            </div>
+        {/if}
 
-            <div class="space-y-6">
-                <!-- Client & Contacts -->
-                <FormSection title="Клиент и контакты" accent="ink">
-                    <FormField
-                        label="Название компании / ФИО"
-                        bind:value={order.company_name}
-                    />
-                    <FormField
-                        label="Контактное лицо"
-                        bind:value={order.contact_person}
-                    />
-                    <FormField
-                        label="Телефон/WhatsApp"
-                        bind:value={order.phone}
-                        phone
-                    />
-                    <FormField
-                        label="Email"
-                        type="email"
-                        bind:value={order.email}
-                    />
-                </FormSection>
+        <div class="space-y-6">
+            <!-- Client & Contacts -->
+            <FormSection title="Клиент и контакты" accent="ink">
+                <FormField
+                    label="Название компании / ФИО"
+                    bind:value={order.company_name}
+                />
+                <FormField
+                    label="Контактное лицо"
+                    bind:value={order.contact_person}
+                />
+                <FormField
+                    label="Телефон/WhatsApp"
+                    bind:value={order.phone}
+                    phone
+                />
+                <FormField
+                    label="Email"
+                    type="email"
+                    bind:value={order.email}
+                />
+            </FormSection>
 
-                <!-- Core Parameters -->
-                <FormSection
-                    title="Основные параметры"
-                    cols={3}
-                    accent="signal"
-                >
-                    <FormField
-                        label="Дата мероприятия"
-                        type="date"
-                        bind:value={order.event_date}
-                    />
-                    <FormField
-                        label="Дата окончательного согласования"
-                        type="date"
-                        bind:value={order.approval_date}
-                    />
-                    <FormField
-                        label="Формат мероприятия"
-                        type="select"
-                        bind:value={order.format}
-                        options={FORMATS}
-                    />
-                    <FormField
-                        label="Тема мероприятия"
-                        bind:value={order.theme}
-                        placeholder="Конференция, выставка..."
-                    />
-                    <FormField
-                        label="Количество гостей"
-                        type="number"
-                        bind:value={order.guest_count}
-                    />
-                    <FormField
-                        label="Сколько подходов гостей к столу?"
-                        type="select"
-                        bind:value={order.service_rounds}
-                        options={serviceRoundsOptions}
-                    />
-                </FormSection>
+            <!-- Core Parameters -->
+            <FormSection
+                title="Основные параметры"
+                cols={3}
+                accent="signal"
+            >
+                <FormField
+                    label="Дата мероприятия"
+                    type="date"
+                    bind:value={order.event_date}
+                />
+                <FormField
+                    label="Дата окончательного согласования"
+                    type="date"
+                    bind:value={order.approval_date}
+                />
+                <FormField
+                    label="Формат мероприятия"
+                    type="select"
+                    bind:value={order.format}
+                    options={FORMATS}
+                />
+                <FormField
+                    label="Тема мероприятия"
+                    bind:value={order.theme}
+                    placeholder="Конференция, выставка..."
+                />
+                <FormField
+                    label="Количество гостей"
+                    type="number"
+                    bind:value={order.guest_count}
+                />
+                <FormField
+                    label="Сколько подходов гостей к столу?"
+                    type="select"
+                    bind:value={order.service_rounds}
+                    options={serviceRoundsOptions}
+                />
+            </FormSection>
 
-                <!-- Time -->
-                <FormSection title="Время" cols={3} accent="signal">
+            <!-- Time -->
+            <FormSection title="Время" cols={3} accent="signal">
+                <FormField
+                    label="Начало мероприятия"
+                    type="time"
+                    bind:value={order.start_time}
+                />
+                <FormField
+                    label="Окончание мероприятия"
+                    type="time"
+                    bind:value={order.end_time}
+                />
+                <FormField
+                    label="Прибытие официантов?"
+                    type="time"
+                    bind:value={order.waiter_arrival}
+                />
+                <FormField
+                    label="Завоз оборудования: когда?"
+                    bind:value={order.equipment_delivery}
+                    cols
+                />
+            </FormSection>
+
+            <!-- Location -->
+            <FormSection title="Локация" accent="steel">
+                <FormField label="Адрес" bind:value={order.address} cols />
+                <FormField
+                    label="Пропускная система"
+                    bind:value={order.access_system}
+                />
+                <FormField
+                    label="Этаж / расположение"
+                    bind:value={order.floor}
+                />
+                <FormField
+                    label="Карта заезда"
+                    bind:value={order.entry_map}
+                />
+                <FormField
+                    label="Электричество"
+                    bind:value={order.electricity}
+                />
+            </FormSection>
+
+            <!-- Equipment -->
+            <FormSection title="Оборудование" accent="steel">
+                <FormField
+                    label="Коктельные столы: количество"
+                    type="number"
+                    bind:value={cocktailTables}
+                />
+                <FormField
+                    label="Фуршетные столы: количество"
+                    type="number"
+                    bind:value={buffetTables}
+                />
+                <FormField
+                    label="Столы: дополнительно"
+                    bind:value={tablesExtra}
+                    placeholder="Любая информация о столах"
+                />
+                <FormField
+                    label="Подсобное помещение: есть/нету"
+                    bind:value={order.utility_room}
+                />
+                <FormField
+                    label="Готовность столов"
+                    type="select"
+                    bind:value={tablesSource}
+                    options={[
+                        { value: "", label: "—" },
+                        { value: "от заказчика", label: "от заказчика" },
+                        { value: "от кейтеринга", label: "от кейтеринга" },
+                    ]}
+                />
+                {#if tablesSource === "от заказчика"}
                     <FormField
-                        label="Начало мероприятия"
+                        label="Время готовности столов от заказчика"
                         type="time"
-                        bind:value={order.start_time}
+                        bind:value={order.tables_ready}
                     />
+                {:else if tablesSource === "от кейтеринга"}
                     <FormField
-                        label="Окончание мероприятия"
+                        label="Время готовности столов (устанавливает менеджер)"
                         type="time"
-                        bind:value={order.end_time}
+                        bind:value={order.tables_ready}
                     />
-                    <FormField
-                        label="Прибытие официантов?"
-                        type="time"
-                        bind:value={order.waiter_arrival}
-                    />
-                    <FormField
-                        label="Завоз оборудования: когда?"
-                        bind:value={order.equipment_delivery}
-                        cols
-                    />
-                </FormSection>
+                {/if}
+                <FormField
+                    label="Баннер от кейтеринга"
+                    type="select"
+                    bind:value={order.banner}
+                    options={YES_NO_OPTIONS}
+                />
+            </FormSection>
 
-                <!-- Location -->
-                <FormSection title="Локация" accent="steel">
-                    <FormField label="Адрес" bind:value={order.address} cols />
-                    <FormField
-                        label="Пропускная система"
-                        bind:value={order.access_system}
-                    />
-                    <FormField
-                        label="Этаж / расположение"
-                        bind:value={order.floor}
-                    />
-                    <FormField
-                        label="Карта заезда"
-                        bind:value={order.entry_map}
-                    />
-                    <FormField
-                        label="Электричество"
-                        bind:value={order.electricity}
-                    />
-                </FormSection>
+            <!-- Event Level -->
+            <FormSection
+                title="Уровень мероприятия"
+                cols={1}
+                accent="signal"
+            >
+                <FormField
+                    label="Уровень"
+                    type="select"
+                    bind:value={order.event_level}
+                    options={EVENT_LEVELS}
+                />
+            </FormSection>
 
-                <!-- Equipment -->
-                <FormSection title="Оборудование" accent="steel">
-                    <FormField
-                        label="Коктельные столы: количество"
-                        type="number"
-                        bind:value={cocktailTables}
-                    />
-                    <FormField
-                        label="Фуршетные столы: количество"
-                        type="number"
-                        bind:value={buffetTables}
-                    />
-                    <FormField
-                        label="Столы: дополнительно"
-                        bind:value={tablesExtra}
-                        placeholder="Любая информация о столах"
-                    />
-                    <FormField
-                        label="Подсобное помещение: есть/нету"
-                        bind:value={order.utility_room}
-                    />
-                    <FormField
-                        label="Готовность столов"
-                        type="select"
-                        bind:value={tablesSource}
-                        options={[
-                            { value: "", label: "—" },
-                            { value: "от заказчика", label: "от заказчика" },
-                            { value: "от кейтеринга", label: "от кейтеринга" },
-                        ]}
-                    />
-                    {#if tablesSource === "от заказчика"}
-                        <FormField
-                            label="Время готовности столов от заказчика"
-                            type="time"
-                            bind:value={order.tables_ready}
+            <!-- Menu -->
+            <FormSection title="Меню" accent="mint">
+                <div class="col-span-2">
+                    <label
+                        for="menu-file-upload"
+                        class="flex flex-col items-center gap-2 rounded-md border-2 border-dashed border-neutral-300 px-6 py-5 text-center cursor-pointer hover:border-signal hover:bg-signal/5 transition-colors duration-150"
+                    >
+                        <span class="text-2xl">📎</span>
+                        <span class="text-sm font-medium text-neutral-700"
+                            >Прикрепить файл меню</span
+                        >
+                        <span class="text-xs text-neutral-400"
+                            >JPEG, PNG, PDF, DOCX, XLSX — до 10 МБ</span
+                        >
+                        <input
+                            id="menu-file-upload"
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx"
+                            onchange={uploadFile}
+                            class="hidden"
                         />
-                    {:else if tablesSource === "от кейтеринга"}
-                        <FormField
-                            label="Время готовности столов (устанавливает менеджер)"
-                            type="time"
-                            bind:value={order.tables_ready}
-                        />
+                    </label>
+                    {#if uploadError}
+                        <p class="mt-2 text-xs text-alert">{uploadError}</p>
                     {/if}
-                    <FormField
-                        label="Баннер от кейтеринга"
-                        type="select"
-                        bind:value={order.banner}
-                        options={YES_NO_OPTIONS}
-                    />
-                </FormSection>
-
-                <!-- Event Level -->
-                <FormSection
-                    title="Уровень мероприятия"
-                    cols={1}
-                    accent="signal"
-                >
-                    <FormField
-                        label="Уровень"
-                        type="select"
-                        bind:value={order.event_level}
-                        options={EVENT_LEVELS}
-                    />
-                </FormSection>
-
-                <!-- Menu -->
-                <FormSection title="Меню" accent="mint">
-                    <div class="col-span-2">
-                        <label
-                            for="menu-file-upload"
-                            class="flex flex-col items-center gap-2 rounded-md border-2 border-dashed border-neutral-300 px-6 py-5 text-center cursor-pointer hover:border-signal hover:bg-signal/5 transition-colors duration-150"
-                        >
-                            <span class="text-2xl">📎</span>
-                            <span class="text-sm font-medium text-neutral-700"
-                                >Прикрепить файл меню</span
-                            >
-                            <span class="text-xs text-neutral-400"
-                                >JPEG, PNG, PDF, DOCX, XLSX — до 10 МБ</span
-                            >
-                            <input
-                                id="menu-file-upload"
-                                type="file"
-                                accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx"
-                                onchange={uploadFile}
-                                class="hidden"
-                            />
-                        </label>
-                        {#if uploadError}
-                            <p class="mt-2 text-xs text-alert">{uploadError}</p>
-                        {/if}
-                    </div>
-                    <FormField
-                        label="Комментарий"
-                        type="textarea"
-                        bind:value={order.menu_comment}
-                        cols
-                        rows={2}
-                    />
-                    <!-- Attached files list -->
-                    <div class="col-span-2 mt-2">
-                        <p class="text-sm font-medium text-neutral-700 mb-2">
-                            Прикреплённые файлы ({files.length})
-                        </p>
-                        {#if files.length > 0}
-                            <div class="space-y-1">
-                                {#each files as f}
-                                    <div
-                                        class="flex items-center justify-between rounded bg-neutral-100 px-3 py-1.5 text-sm"
+                </div>
+                <FormField
+                    label="Комментарий"
+                    type="textarea"
+                    bind:value={order.menu_comment}
+                    cols
+                    rows={2}
+                />
+                <!-- Attached files list -->
+                <div class="col-span-2 mt-2">
+                    <p class="text-sm font-medium text-neutral-700 mb-2">
+                        Прикреплённые файлы ({files.length})
+                    </p>
+                    {#if files.length > 0}
+                        <div class="space-y-1">
+                            {#each files as f}
+                                <div
+                                    class="flex items-center justify-between rounded bg-neutral-100 px-3 py-1.5 text-sm"
+                                >
+                                    <button
+                                        class="text-ink hover:underline text-left truncate flex-1 bg-transparent border-0 p-0 cursor-pointer"
+                                        onclick={() =>
+                                            downloadFile(
+                                                f.file_path,
+                                                f.file_name,
+                                            )}
+                                        >{f.file_name}</button
                                     >
-                                        <button
-                                            class="text-ink hover:underline text-left truncate flex-1 bg-transparent border-0 p-0 cursor-pointer"
-                                            onclick={() =>
-                                                downloadFile(
-                                                    f.file_path,
-                                                    f.file_name,
-                                                )}
-                                            >{f.file_name}</button
+                                    <span
+                                        class="text-xs text-neutral-400 mx-2"
+                                        >{formatBytes(f.file_size)}</span
+                                    >
+                                    <button
+                                        class="text-alert hover:opacity-70 text-xs bg-transparent border-0 p-0 cursor-pointer"
+                                        aria-label={`Удалить файл ${f.file_name}`}
+                                        title="Удалить файл"
+                                        onclick={() =>
+                                            deleteFile(f.id, f.file_path)}
+                                        >✕</button
+                                    >
+                                </div>
+                            {/each}
+                        </div>
+                    {:else}
+                        <p class="text-xs text-neutral-400">Нет файлов</p>
+                    {/if}
+                </div>
+            </FormSection>
+
+            <!-- Beverages -->
+            <FormSection title="Напитки" accent="mint">
+                <FormField
+                    label="Алкоголь"
+                    bind:value={order.alcohol}
+                    placeholder="Да / Нет / Какой"
+                />
+                <FormField
+                    label="Вода"
+                    type="select"
+                    bind:value={order.water}
+                    options={[
+                        { value: "", label: "—" },
+                        { value: "согласно меню", label: "согласно меню" },
+                        { value: "от заказчика", label: "от заказчика" },
+                    ]}
+                />
+                <FormField
+                    label="Соки"
+                    type="select"
+                    bind:value={order.juices}
+                    options={[
+                        { value: "", label: "—" },
+                        { value: "согласно меню", label: "согласно меню" },
+                        { value: "от заказчика", label: "от заказчика" },
+                    ]}
+                />
+                <FormField
+                    label="Кофе"
+                    type="select"
+                    bind:value={order.coffee}
+                    options={[
+                        { value: "", label: "—" },
+                        { value: "согласно меню", label: "согласно меню" },
+                        { value: "от заказчика", label: "от заказчика" },
+                    ]}
+                />
+            </FormSection>
+
+            <!-- Other -->
+            <FormSection title="Прочее" accent="mint">
+                <FormField
+                    label="Горячее"
+                    bind:value={order.hot_dishes}
+                    placeholder="Да / Нет"
+                />
+                <FormField
+                    label="Посуда"
+                    type="select"
+                    bind:value={order.dishware}
+                    options={DISHWARE_TYPES}
+                />
+                <FormField
+                    label="Доп. требования"
+                    type="textarea"
+                    bind:value={order.extra_requirements}
+                    cols
+                    rows={2}
+                />
+            </FormSection>
+
+            <!-- Finance -->
+            <FormSection title="Финансы" accent="mint">
+                <FormField
+                    label="Общая стоимость (тг)"
+                    type="number"
+                    bind:value={order.total_cost}
+                />
+                <div>
+                    <FormField
+                        label="Статус оплаты"
+                        bind:value={order.payment_status}
+                    />
+                    <!-- G11: cost per guest hint -->
+                    {#if order.total_cost && order.guest_count}
+                        <p class="text-xs text-neutral-400 mt-1">
+                            ≈ {new Intl.NumberFormat("ru-RU").format(
+                                Math.round(
+                                    order.total_cost / order.guest_count,
+                                ),
+                            )} тг на гостя
+                        </p>
+                    {/if}
+                </div>
+            </FormSection>
+
+            <!-- G13: Important flag + G17: Reminder + G24: Comments -->
+            <FormSection title="Дополнительно" cols={2}>
+                <div class="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        id="chk-important"
+                        checked={order.is_important ?? false}
+                        onchange={(e) =>
+                            (order.is_important = (
+                                e.target as HTMLInputElement
+                            ).checked)}
+                        class="rounded border-neutral-300 text-signal focus:ring-signal"
+                    />
+                    <label
+                        for="chk-important"
+                        class="text-sm text-neutral-700 cursor-pointer select-none"
+                    >
+                        ⭐ Важный заказ
+                    </label>
+                </div>
+                <FormField
+                    label="Напомнить за N дней до мероприятия"
+                    type="number"
+                    bind:value={order.reminder_days}
+                    placeholder="Напр. 3"
+                />
+                <FormField
+                    label="Внутренние комментарии"
+                    type="textarea"
+                    bind:value={order.internal_notes}
+                    cols
+                    rows={3}
+                    placeholder="Заметки для команды (не видны клиенту)"
+                />
+            </FormSection>
+
+            <!-- History: visual timeline -->
+            <section
+                class="rounded-lg bg-paper shadow-card border border-neutral-200/60 overflow-hidden"
+            >
+                <div class="p-4 sm:p-5">
+                    <h3
+                        class="mb-4 text-sm font-display font-semibold text-ink tracking-tight"
+                    >
+                        История статусов
+                    </h3>
+                    {#if history.length > 0}
+                        <div class="relative">
+                            <!-- Timeline vertical line -->
+                            <div
+                                class="absolute left-2 top-1 bottom-1 w-px bg-neutral-200"
+                                aria-hidden="true"
+                            ></div>
+                            <div class="space-y-3">
+                                {#each history as h, i}
+                                    {@const hStatus = statuses.find(
+                                        (s) => s.id === h.new_status_id,
+                                    )}
+                                    {@const hIdx =
+                                        hStatus?.order_index ?? -1}
+                                    <div class="flex gap-3 relative">
+                                        <!-- Timeline dot -->
+                                        <div
+                                            class={`relative z-10 mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-paper ${hIdx >= 0 ? statusTempClass(hIdx).split(" ")[0] : "bg-neutral-300"} ${i === 0 ? "ring-2 ring-signal/20" : ""}`}
+                                            aria-hidden="true"
                                         >
-                                        <span
-                                            class="text-xs text-neutral-400 mx-2"
-                                            >{formatBytes(f.file_size)}</span
-                                        >
-                                        <button
-                                            class="text-alert hover:opacity-70 text-xs bg-transparent border-0 p-0 cursor-pointer"
-                                            aria-label={`Удалить файл ${f.file_name}`}
-                                            title="Удалить файл"
-                                            onclick={() =>
-                                                deleteFile(f.id, f.file_path)}
-                                            >✕</button
-                                        >
+                                            {#if i === 0}
+                                                <span
+                                                    class="size-1 rounded-full bg-paper"
+                                                ></span>
+                                            {/if}
+                                        </div>
+                                        <!-- Content -->
+                                        <div class="flex-1 min-w-0">
+                                            <div
+                                                class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
+                                            >
+                                                <span
+                                                    class="text-xs font-medium text-ink"
+                                                >
+                                                    → {h.statuses?.name ??
+                                                        "?"}
+                                                </span>
+                                                {#if h.profiles?.full_name}
+                                                    <span
+                                                        class="text-xs text-neutral-400"
+                                                    >
+                                                        {h.profiles
+                                                            .full_name}
+                                                    </span>
+                                                {/if}
+                                            </div>
+                                            <p
+                                                class="text-2xs text-neutral-400 font-mono mt-0.5"
+                                            >
+                                                {new Date(
+                                                    h.changed_at,
+                                                ).toLocaleString("ru-RU", {
+                                                    day: "numeric",
+                                                    month: "short",
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                })}
+                                            </p>
+                                            {#if h.comment}
+                                                <p
+                                                    class="text-xs text-neutral-500 mt-1 italic"
+                                                >
+                                                    {h.comment}
+                                                </p>
+                                            {/if}
+                                        </div>
                                     </div>
                                 {/each}
                             </div>
-                        {:else}
-                            <p class="text-xs text-neutral-400">Нет файлов</p>
-                        {/if}
-                    </div>
-                </FormSection>
-
-                <!-- Beverages -->
-                <FormSection title="Напитки" accent="mint">
-                    <FormField
-                        label="Алкоголь"
-                        bind:value={order.alcohol}
-                        placeholder="Да / Нет / Какой"
-                    />
-                    <FormField
-                        label="Вода"
-                        type="select"
-                        bind:value={order.water}
-                        options={[
-                            { value: "", label: "—" },
-                            { value: "согласно меню", label: "согласно меню" },
-                            { value: "от заказчика", label: "от заказчика" },
-                        ]}
-                    />
-                    <FormField
-                        label="Соки"
-                        type="select"
-                        bind:value={order.juices}
-                        options={[
-                            { value: "", label: "—" },
-                            { value: "согласно меню", label: "согласно меню" },
-                            { value: "от заказчика", label: "от заказчика" },
-                        ]}
-                    />
-                    <FormField
-                        label="Кофе"
-                        type="select"
-                        bind:value={order.coffee}
-                        options={[
-                            { value: "", label: "—" },
-                            { value: "согласно меню", label: "согласно меню" },
-                            { value: "от заказчика", label: "от заказчика" },
-                        ]}
-                    />
-                </FormSection>
-
-                <!-- Other -->
-                <FormSection title="Прочее" accent="mint">
-                    <FormField
-                        label="Горячее"
-                        bind:value={order.hot_dishes}
-                        placeholder="Да / Нет"
-                    />
-                    <FormField
-                        label="Посуда"
-                        type="select"
-                        bind:value={order.dishware}
-                        options={DISHWARE_TYPES}
-                    />
-                    <FormField
-                        label="Доп. требования"
-                        type="textarea"
-                        bind:value={order.extra_requirements}
-                        cols
-                        rows={2}
-                    />
-                </FormSection>
-
-                <!-- Finance -->
-                <FormSection title="Финансы" accent="mint">
-                    <FormField
-                        label="Общая стоимость (тг)"
-                        type="number"
-                        bind:value={order.total_cost}
-                    />
-                    <div>
-                        <FormField
-                            label="Статус оплаты"
-                            bind:value={order.payment_status}
-                        />
-                        <!-- G11: cost per guest hint -->
-                        {#if order.total_cost && order.guest_count}
-                            <p class="text-xs text-neutral-400 mt-1">
-                                ≈ {new Intl.NumberFormat("ru-RU").format(
-                                    Math.round(
-                                        order.total_cost / order.guest_count,
-                                    ),
-                                )} тг на гостя
-                            </p>
-                        {/if}
-                    </div>
-                </FormSection>
-
-                <!-- G13: Important flag + G17: Reminder + G24: Comments -->
-                <FormSection title="Дополнительно" cols={2}>
-                    <div class="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            id="chk-important"
-                            checked={order.is_important ?? false}
-                            onchange={(e) =>
-                                (order.is_important = (
-                                    e.target as HTMLInputElement
-                                ).checked)}
-                            class="rounded border-neutral-300 text-signal focus:ring-signal"
-                        />
-                        <label
-                            for="chk-important"
-                            class="text-sm text-neutral-700 cursor-pointer select-none"
-                        >
-                            ⭐ Важный заказ
-                        </label>
-                    </div>
-                    <FormField
-                        label="Напомнить за N дней до мероприятия"
-                        type="number"
-                        bind:value={order.reminder_days}
-                        placeholder="Напр. 3"
-                    />
-                    <FormField
-                        label="Внутренние комментарии"
-                        type="textarea"
-                        bind:value={order.internal_notes}
-                        cols
-                        rows={3}
-                        placeholder="Заметки для команды (не видны клиенту)"
-                    />
-                </FormSection>
-
-                <!-- History: visual timeline -->
-                <section
-                    class="rounded-lg bg-paper shadow-card border border-neutral-200/60 overflow-hidden"
-                >
-                    <div class="p-4 sm:p-5">
-                        <h3
-                            class="mb-4 text-sm font-display font-semibold text-ink tracking-tight"
-                        >
-                            История статусов
-                        </h3>
-                        {#if history.length > 0}
-                            <div class="relative">
-                                <!-- Timeline vertical line -->
-                                <div
-                                    class="absolute left-2 top-1 bottom-1 w-px bg-neutral-200"
-                                    aria-hidden="true"
-                                ></div>
-                                <div class="space-y-3">
-                                    {#each history as h, i}
-                                        {@const hStatus = statuses.find(
-                                            (s) => s.id === h.new_status_id,
-                                        )}
-                                        {@const hIdx =
-                                            hStatus?.order_index ?? -1}
-                                        <div class="flex gap-3 relative">
-                                            <!-- Timeline dot -->
-                                            <div
-                                                class={`relative z-10 mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-paper ${hIdx >= 0 ? statusTempClass(hIdx).split(" ")[0] : "bg-neutral-300"} ${i === 0 ? "ring-2 ring-signal/20" : ""}`}
-                                                aria-hidden="true"
-                                            >
-                                                {#if i === 0}
-                                                    <span
-                                                        class="size-1 rounded-full bg-paper"
-                                                    ></span>
-                                                {/if}
-                                            </div>
-                                            <!-- Content -->
-                                            <div class="flex-1 min-w-0">
-                                                <div
-                                                    class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
-                                                >
-                                                    <span
-                                                        class="text-xs font-medium text-ink"
-                                                    >
-                                                        → {h.statuses?.name ??
-                                                            "?"}
-                                                    </span>
-                                                    {#if h.profiles?.full_name}
-                                                        <span
-                                                            class="text-xs text-neutral-400"
-                                                        >
-                                                            {h.profiles
-                                                                .full_name}
-                                                        </span>
-                                                    {/if}
-                                                </div>
-                                                <p
-                                                    class="text-2xs text-neutral-400 font-mono mt-0.5"
-                                                >
-                                                    {new Date(
-                                                        h.changed_at,
-                                                    ).toLocaleString("ru-RU", {
-                                                        day: "numeric",
-                                                        month: "short",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                    })}
-                                                </p>
-                                                {#if h.comment}
-                                                    <p
-                                                        class="text-xs text-neutral-500 mt-1 italic"
-                                                    >
-                                                        {h.comment}
-                                                    </p>
-                                                {/if}
-                                            </div>
-                                        </div>
-                                    {/each}
-                                </div>
-                            </div>
-                        {:else}
-                            <p class="text-xs text-neutral-400">
-                                История изменений статуса появится здесь
-                            </p>
-                        {/if}
-                    </div>
-                </section>
-            </div>
-
-            <!-- Save + Duplicate buttons -->
-            <div class="mt-6 flex gap-3">
-                <div class="flex-1">
-                    <Button
-                        variant="primary"
-                        full
-                        onclick={save}
-                        loading={saving}
-                    >
-                        {saving ? "Сохранение..." : "Сохранить"}
-                    </Button>
+                        </div>
+                    {:else}
+                        <p class="text-xs text-neutral-400">
+                            История изменений статуса появится здесь
+                        </p>
+                    {/if}
                 </div>
-                <Button variant="secondary" onclick={duplicateOrder}>
-                    Дублировать
+            </section>
+        </div>
+
+        <!-- Save + Duplicate buttons -->
+        <div class="mt-6 flex gap-3">
+            <div class="flex-1">
+                <Button
+                    variant="primary"
+                    full
+                    onclick={save}
+                    loading={saving}
+                >
+                    {saving ? "Сохранение..." : "Сохранить"}
                 </Button>
             </div>
+            <Button variant="secondary" onclick={duplicateOrder}>
+                Дублировать
+            </Button>
         </div>
-    {/if}
-</main>
+    </div>
+{/if}

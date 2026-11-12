@@ -1,9 +1,23 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { browser } from "$app/environment";
+	import { page } from "$app/state";
+	import Header from "$lib/components/Header.svelte";
 	import "../app.css";
 
 	let { children } = $props();
+
+	/**
+	 * App shell: Header + <main> rendered once for every authenticated screen.
+	 * Public screens (/login, /form/[token]) render standalone, and error pages
+	 * provide their own full-screen <main>, so the shell is skipped there to
+	 * avoid a nested <main>.
+	 */
+	const isPublicRoute = $derived(
+		page.url.pathname === "/login" ||
+			page.url.pathname.startsWith("/form/"),
+	);
+	const showShell = $derived(!isPublicRoute && page.error === null);
 
 	let updateReady = $state(false);
 	let waitingWorker = $state<ServiceWorker | null>(null);
@@ -98,7 +112,14 @@
 	<title>Catering CRM</title>
 </svelte:head>
 
-{@render children()}
+{#if showShell}
+	<Header />
+	<main class="min-h-screen bg-neutral-50">
+		{@render children()}
+	</main>
+{:else}
+	{@render children()}
+{/if}
 
 {#if updateReady}
 	<div
