@@ -1,8 +1,9 @@
 <script lang="ts">
     import { onMount, untrack } from "svelte";
     import { supabase } from "$lib/supabase";
-    import { goto } from "$app/navigation";
+    import { beforeNavigate, goto } from "$app/navigation";
     import { page } from "$app/stores";
+    import { toasts } from "$lib/stores/toasts.svelte";
     import FormSection from "$lib/components/form/FormSection.svelte";
     import FormField from "$lib/components/form/FormField.svelte";
     import Button from "$lib/components/ui/Button.svelte";
@@ -21,8 +22,10 @@
     let files: any[] = $state([]);
     let history: any[] = $state([]);
     let saving = $state(false);
+    // error — только ошибка загрузки страницы (inline-баннер). Транзиентные
+    // ошибки действий показываются toast'ом, чтобы не дублировать сообщения.
     let error = $state("");
-    let success = $state("");
+    // uploadError — только ошибки валидации файла (inline рядом с полем)
     let uploadError = $state("");
     let tablesSource = $state<"от заказчика" | "от кейтеринга" | "">("");
     let cocktailTables = $state<number | null>(null);
@@ -93,6 +96,11 @@
     /** id заказа, данные которого уже загружены (защита от двойной загрузки) */
     let loadedOrderId: string | undefined = undefined;
 
+    /** Канонический снимок полей после load()/save() — основа dirty */
+    let savedSnapshot = $state("");
+    /** true, когда навигацию инициировало само приложение (guard не спрашивает) */
+    let bypassUnsavedGuard = false;
+
     // ---- Helpers ----
 
     /** Parse tables_info JSON into local state */
@@ -159,6 +167,58 @@
         return body;
     }
 
+    /** Каноническая форма tables_info для сравнения (числа как числа) */
+    function canonicalTablesInfo(raw: string | null): unknown {
+        if (!raw) return null;
+        try {
+            const parsed = JSON.parse(raw);
+            const obj: Record<string, unknown> = {};
+            if (parsed.c != null) obj.c = Number(parsed.c);
+            if (parsed.f != null) obj.f = Number(parsed.f);
+            if (parsed.x) obj.x = String(parsed.x);
+            return Object.keys(obj).length > 0 ? obj : null;
+        } catch {
+            return raw;
+        }
+    }
+
+    /**
+     * Канонический снимок редактируемых полей: то же, что уйдёт в
+     * buildUpdateBody, плюс tables_info. Сравниваем через него, чтобы
+     * number→string от HTML-инпутов не давал ложный dirty.
+     */
+    function captureFormSnapshot(): string {
+        if (!order) return "";
+        const body = buildUpdateBody(order);
+        body.tables_info = canonicalTablesInfo(serializeTablesInfo());
+        return JSON.stringify(body);
+    }
+
+    /** Есть ли несохранённые изменения относительно последнего load()/save() */
+    const dirty = $derived(
+        !!order &&
+            savedSnapshot !== "" &&
+            captureFormSnapshot() !== savedSnapshot,
+    );
+
+    /** Переход, инициированный приложением: guard не должен его блокировать */
+    function bypassGuardGoto(path: string) {
+        bypassUnsavedGuard = true;
+        goto(path);
+    }
+
+    // Защита от потери несохранённых изменений при любом уходе со страницы
+    beforeNavigate(({ cancel }) => {
+        if (bypassUnsavedGuard) {
+            bypassUnsavedGuard = false;
+            return;
+        }
+        if (!dirty) return;
+        if (!confirm("Есть несохранённые изменения. Уйти без сохранения?")) {
+            cancel();
+        }
+    });
+
     /** Сброс локального состояния при переходе на другой заказ */
     function resetViewState() {
         order = null;
@@ -166,7 +226,7 @@
         files = [];
         history = [];
         error = "";
-        success = "";
+        savedSnapshot = "";
         uploadError = "";
         formLinkCopied = false;
         showCancelReason = false;
@@ -186,14 +246,14 @@
         const currentId = id;
         const { data, error: loadErr } = await supabase
             .from("orders")
-            .select("*, clients(*), statuses(*)")
+            .select("*, clients(*, orders(count)), statuses(*)")
             .eq("id", currentId)
             .single();
         // Пока грузились, пользователь мог уйти на другой заказ
         if (currentId !== id) return;
         if (loadErr || !data) {
             if (!data) {
-                goto("/");
+                bypassGuardGoto("/");
             } else {
                 error = `Не удалось загрузить заказ: ${loadErr!.message}`;
             }
@@ -225,6 +285,9 @@
 
         // Parse tables_info JSON into local sub-fields
         parseTablesInfo(data.tables_info);
+
+        // Снимок для отслеживания несохранённых изменений
+        savedSnapshot = captureFormSnapshot();
     }
 
     /**
@@ -247,11 +310,17 @@
     // ---- Actions ----
     async function save() {
         saving = true;
-        error = "";
-        success = "";
 
         const body = buildUpdateBody(order);
         body.tables_info = serializeTablesInfo();
+        // Снимок именно того, что уходит в БД: если пользователь продолжит
+        // править поля во время запроса, dirty не «потеряется»
+        const persistedSnapshot = JSON.stringify({
+            ...body,
+            tables_info: canonicalTablesInfo(
+                body.tables_info as string | null,
+            ),
+        });
 
         const { error: err } = await supabase
             .from("orders")
@@ -259,16 +328,16 @@
             .eq("id", id);
 
         if (err) {
-            error = err.message;
+            toasts.push(`Не удалось сохранить заказ: ${err.message}`, "error");
         } else {
-            success = "Сохранено";
-            setTimeout(() => (success = ""), 2000);
+            toasts.push("Заказ сохранён");
+            // Сохранённое состояние становится «чистым»
+            savedSnapshot = persistedSnapshot;
         }
         saving = false;
     }
 
     async function changeStatus(statusId: string) {
-        error = "";
         // G2: если статус «Отменён» — запросить причину
         const targetStatus = statuses.find((s) => s.id === statusId);
         if (targetStatus?.order_index === 6) {
@@ -368,7 +437,10 @@
         });
 
         if (rpcErr) {
-            error = `Не удалось изменить статус: ${rpcErr.message}`;
+            toasts.push(
+                `Не удалось изменить статус: ${rpcErr.message}`,
+                "error",
+            );
             // Возвращаем селект к реальному статусу заказа
             selectedStatusId = order?.status_id ?? null;
             return;
@@ -381,10 +453,14 @@
                 .update({ cancel_reason: cancelReasonText })
                 .eq("id", id);
             if (reasonErr) {
-                error = `Статус изменён, но причину отмены сохранить не удалось: ${reasonErr.message}`;
+                toasts.push(
+                    `Статус изменён, но причину отмены сохранить не удалось: ${reasonErr.message}`,
+                    "error",
+                );
             }
         }
 
+        // Перезагрузка заказа заодно сбрасывает dirty
         await load();
     }
 
@@ -402,7 +478,6 @@
     }
 
     async function copyFormLink() {
-        error = "";
         try {
             if (!navigator.clipboard) {
                 throw new Error("Clipboard API недоступен");
@@ -412,7 +487,10 @@
             setTimeout(() => (formLinkCopied = false), 2000);
         } catch {
             // fallback: показываем ссылку, чтобы её можно было скопировать вручную
-            error = `Не удалось скопировать ссылку. Скопируйте вручную: ${getFormLink()}`;
+            toasts.push(
+                `Не удалось скопировать ссылку. Скопируйте вручную: ${getFormLink()}`,
+                "error",
+            );
         }
     }
 
@@ -427,7 +505,6 @@
     async function sendPDFToWhatsApp() {
         if (!order?.phone || sendingPDF) return;
         sendingPDF = true;
-        error = "";
 
         try {
             // 1. Generate PDF blob
@@ -473,13 +550,15 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                success = "PDF скачан — перетащите его в чат WhatsApp";
-                setTimeout(() => (success = ""), 3000);
+                toasts.push(
+                    "PDF скачан — перетащите его в чат WhatsApp",
+                    "info",
+                );
             }
 
             load();
         } catch (err: any) {
-            error = err.message || "Не удалось отправить PDF";
+            toasts.push(err.message || "Не удалось отправить PDF", "error");
         }
         sendingPDF = false;
     }
@@ -517,9 +596,13 @@
             .single();
 
         if (dupErr) {
-            error = dupErr.message;
+            toasts.push(
+                `Не удалось дублировать заказ: ${dupErr.message}`,
+                "error",
+            );
         } else if (newOrder) {
-            goto(`/orders/${newOrder.id}`);
+            // Программный переход после дублирования guard не блокирует
+            bypassGuardGoto(`/orders/${newOrder.id}`);
         }
     }
 
@@ -542,7 +625,10 @@
             .from("order-files")
             .upload(path, file);
         if (storageErr) {
-            uploadError = `Не удалось загрузить файл: ${storageErr.message}`;
+            toasts.push(
+                `Не удалось загрузить файл: ${storageErr.message}`,
+                "error",
+            );
             input.value = "";
             return;
         }
@@ -559,19 +645,24 @@
             uploaded_by: session?.user?.id,
         });
         if (insertErr) {
-            uploadError = `Файл загружен, но запись о нём не сохранилась: ${insertErr.message}`;
+            toasts.push(
+                `Файл загружен, но запись о нём не сохранилась: ${insertErr.message}`,
+                "error",
+            );
         }
         input.value = "";
         await load();
     }
 
     async function deleteFile(fileId: string, filePath: string) {
-        error = "";
         const { error: removeErr } = await supabase.storage
             .from("order-files")
             .remove([filePath]);
         if (removeErr) {
-            error = `Не удалось удалить файл: ${removeErr.message}`;
+            toasts.push(
+                `Не удалось удалить файл: ${removeErr.message}`,
+                "error",
+            );
             return;
         }
 
@@ -580,7 +671,10 @@
             .delete()
             .eq("id", fileId);
         if (dbErr) {
-            error = `Файл удалён из хранилища, но запись осталась: ${dbErr.message}`;
+            toasts.push(
+                `Файл удалён из хранилища, но запись осталась: ${dbErr.message}`,
+                "error",
+            );
         }
         await load();
     }
@@ -598,7 +692,6 @@
     }
 
     async function downloadFile(filePath: string, fileName: string) {
-        error = "";
         // Бакет order-files приватный — публичный URL отдаёт 403, берём signed URL
         const { data, error: signErr } = await supabase.storage
             .from("order-files")
@@ -617,7 +710,10 @@
             return;
         }
 
-        error = `Не удалось скачать файл: ${signErr?.message ?? "не удалось подписать ссылку"}`;
+        toasts.push(
+            `Не удалось скачать файл: ${signErr?.message ?? "не удалось подписать ссылку"}`,
+            "error",
+        );
     }
 
     function formatBytes(bytes: number | null | undefined): string {
@@ -836,16 +932,35 @@
                 {error}
             </div>
         {/if}
-        {#if success}
-            <div
-                class="mb-4 rounded-md bg-mint/10 border border-mint/20 p-3 text-sm text-mint"
-            >
-                {success}
-            </div>
-        {/if}
 
         <div class="space-y-6">
             <!-- Client & Contacts -->
+            <!-- Связь с клиентом: переход в его карточку и история обращений -->
+            {#if order.client_id && order.clients}
+                <div
+                    class="mb-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500"
+                >
+                    <span>Клиент:</span>
+                    <a
+                        href={`/clients/${order.client_id}`}
+                        class="font-medium text-ink hover:text-signal no-underline"
+                        >{order.clients.name}</a
+                    >
+                    {#if (order.clients.orders?.[0]?.count ?? 0) > 1}
+                        <span
+                            class="rounded-full bg-mint/15 px-2 py-0.5 font-medium text-mint"
+                            >повторный · {order.clients.orders[0].count}
+                            заказа</span
+                        >
+                    {/if}
+                    <a
+                        href={`/clients/${order.client_id}`}
+                        class="text-signal hover:underline no-underline"
+                        >история обращений →</a
+                    >
+                </div>
+            {/if}
+
             <FormSection title="Клиент и контакты" accent="ink">
                 <FormField
                     label="Название компании / ФИО"

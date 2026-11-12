@@ -15,6 +15,14 @@ import { POLLING_INTERVAL_MS } from "$lib/config";
 
 type Status = { id: string; name: string; order_index: number };
 
+/** Embedded client info + the client's total order count (nested aggregate). */
+type ClientAggregate = {
+    id?: string | null;
+    name?: string | null;
+    /** PostgREST returns aggregates as an array: [{ count: N }]. */
+    orders?: { count: number }[] | null;
+};
+
 type Order = {
     id: string;
     status_id: string;
@@ -27,12 +35,31 @@ type Order = {
     format?: string | null;
     total_cost?: number | null;
     is_important?: boolean | null;
+    /** Flattened client order count — see `withClientOrderCount`. */
+    client_orders_count?: number;
+    clients?: ClientAggregate | null;
     profiles?: { initials?: string | null; full_name?: string | null } | null;
 };
 
-/** Columns selected for every orders query (initial load and polling). */
+/**
+ * Columns selected for every orders query (initial load and polling).
+ * `clients(id, name, orders(count))` is a single nested aggregate: it returns
+ * the client's total order count inline, so no second request is needed.
+ */
 const ORDER_COLUMNS =
-    "id, status_id, order_number, company_name, contact_person, event_date, start_time, guest_count, format, total_cost, is_important, manager_id, profiles!orders_manager_id_fkey(initials, full_name)";
+    "id, status_id, order_number, company_name, contact_person, event_date, start_time, guest_count, format, total_cost, is_important, manager_id, clients(id, name, orders(count)), profiles!orders_manager_id_fkey(initials, full_name)";
+
+/**
+ * Flatten the nested aggregate into `client_orders_count`.
+ * Defensive: `clients` can be null (no client / hidden by RLS) and
+ * `clients.orders` can be missing or empty.
+ */
+function withClientOrderCount(order: Order): Order {
+    return {
+        ...order,
+        client_orders_count: order.clients?.orders?.[0]?.count ?? 0,
+    };
+}
 
 function isAbortError(err: any): boolean {
     return (
@@ -164,7 +191,11 @@ class KanbanStore {
 
             this.totalCount = count ?? 0;
             this.hasMore = this.totalCount > lastRow + 1;
-            this.orders = this.mergeOptimistic((data as Order[]) ?? []);
+            // mergeOptimistic is unchanged; the flattened repeat-client count
+            // is derived afterwards so the UI reads a plain number.
+            this.orders = this.mergeOptimistic((data as Order[]) ?? []).map(
+                withClientOrderCount,
+            );
             this.error = null;
         } catch (err: any) {
             if (isAbortError(err)) {

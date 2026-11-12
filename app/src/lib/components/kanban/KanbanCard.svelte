@@ -36,6 +36,8 @@
             format?: string | null;
             total_cost?: number | null;
             is_important?: boolean | null; // G13
+            /** Flattened client order count (wave 3B). */
+            client_orders_count?: number | null;
             profiles?: {
                 initials?: string | null;
                 full_name?: string | null;
@@ -53,6 +55,11 @@
 
     const initials = $derived(
         order.profiles?.initials || order.profiles?.full_name?.charAt(0) || "?",
+    );
+
+    /** Client's total order count; > 1 means this is a repeat client. */
+    const clientOrdersCount = $derived(
+        Number(order.client_orders_count) || 0,
     );
 
     // ---- Pointer drag (touch/pen only — mouse keeps native HTML5 DnD) ----
@@ -220,6 +227,14 @@
                     class="shrink-0"
                     title="Важный заказ"
                     aria-label="Важный заказ">⭐</span
+                >
+            {/if}
+            {#if clientOrdersCount > 1}
+                <span
+                    class="shrink-0 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-neutral-200 px-1 text-2xs font-bold leading-none text-neutral-500"
+                    title={`${clientOrdersCount}-й заказ клиента`}
+                    aria-label={`Повторный клиент, ${clientOrdersCount}-й заказ`}
+                    >↺</span
                 >
             {/if}
         </div>

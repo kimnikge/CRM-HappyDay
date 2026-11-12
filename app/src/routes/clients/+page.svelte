@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, untrack } from "svelte";
     import { supabase } from "$lib/supabase";
+    import { toasts } from "$lib/stores/toasts.svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import Input from "$lib/components/ui/Input.svelte";
 
@@ -73,7 +74,7 @@
         loading = true;
         const { data, error: err } = await supabase
             .from("clients")
-            .select("*")
+            .select("*, orders(count), client_activities(count)")
             .order("name");
         clients = data ?? [];
         if (err) error = err.message;
@@ -170,12 +171,14 @@
     async function save(e: SubmitEvent) {
         e.preventDefault();
         if (!name.trim()) {
+            // Ошибка поля — остаётся inline у формы
             formError = "Название обязательно";
             return;
         }
         saving = true;
         formError = "";
 
+        const isEdit = editId !== null;
         const payload = {
             name: name.trim(),
             contact_person: contactPerson || null,
@@ -184,12 +187,13 @@
             notes: notes || null,
         };
 
+        let saveError = "";
         if (editId) {
             const { error: err } = await supabase
                 .from("clients")
                 .update(payload)
                 .eq("id", editId);
-            if (err) formError = err.message;
+            if (err) saveError = err.message;
         } else {
             const {
                 data: { session },
@@ -197,13 +201,19 @@
             const { error: err } = await supabase
                 .from("clients")
                 .insert({ ...payload, created_by: session?.user?.id });
-            if (err) formError = err.message;
+            if (err) saveError = err.message;
         }
 
         saving = false;
-        if (!formError) {
+        if (saveError) {
+            toasts.push(
+                `Не удалось сохранить клиента: ${saveError}`,
+                "error",
+            );
+        } else {
             closeForm();
-            load();
+            toasts.push(isEdit ? "Клиент сохранён" : "Клиент добавлен");
+            await load();
         }
     }
 
@@ -214,9 +224,13 @@
             .delete()
             .eq("id", id);
         if (err) {
-            error = err.message;
+            toasts.push(
+                `Не удалось удалить клиента: ${err.message}`,
+                "error",
+            );
         } else {
-            load();
+            toasts.push(`Клиент «${clientName}» удалён`);
+            await load();
         }
     }
 
@@ -287,6 +301,10 @@
                             class="px-3 sm:px-4 py-2.5 sm:py-3 hidden md:table-cell"
                             >Email</th
                         >
+                        <th
+                            class="px-3 sm:px-4 py-2.5 sm:py-3 hidden sm:table-cell text-right"
+                            >Заказов</th
+                        >
                         <th class="px-3 sm:px-4 py-2.5 sm:py-3 w-1"></th>
                     </tr>
                 </thead>
@@ -296,10 +314,10 @@
                             class="border-b border-neutral-100 hover:bg-neutral-50 transition-colors duration-100"
                         >
                             <td class="px-3 sm:px-4 py-2.5">
-                                <button
-                                    class="text-ink hover:text-signal text-left bg-transparent border-0 p-0 cursor-pointer font-medium text-sm"
-                                    onclick={(event) => openEdit(c, event)}
-                                    >{c.name}</button
+                                <a
+                                    href={`/clients/${c.id}`}
+                                    class="text-ink hover:text-signal text-left no-underline font-medium text-sm"
+                                    >{c.name}</a
                                 >
                                 <!-- Show contact person inline on mobile -->
                                 <span
@@ -320,7 +338,18 @@
                                 class="px-3 sm:px-4 py-2.5 text-neutral-600 hidden md:table-cell text-xs sm:text-sm"
                                 >{c.email || "—"}</td
                             >
-                            <td class="px-2 sm:px-4 py-2.5">
+                            <td
+                                class="px-3 sm:px-4 py-2.5 hidden sm:table-cell text-right text-neutral-600 text-xs sm:text-sm tabular-nums"
+                                >{c.orders?.[0]?.count ?? 0}</td
+                            >
+                            <td class="px-2 sm:px-4 py-2.5 whitespace-nowrap">
+                                <button
+                                    class="text-neutral-500 hover:text-signal text-xs bg-transparent border-0 p-0 cursor-pointer min-w-8 min-h-8 mr-1"
+                                    onclick={(event) => openEdit(c, event)}
+                                    title="Редактировать"
+                                    aria-label={`Редактировать клиента ${c.name}`}
+                                    >✎</button
+                                >
                                 <button
                                     class="text-alert hover:opacity-70 text-xs bg-transparent border-0 p-0 cursor-pointer min-w-8 min-h-8"
                                     onclick={() =>
