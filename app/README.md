@@ -158,7 +158,7 @@ app/
 │   └── app.css                 # Tailwind 4 + дизайн-токены
 ├── static/                     # favicon, manifest, sw.js
 ├── supabase/
-│   ├── migrations/             # SQL-миграции 001–009
+│   ├── migrations/             # SQL-миграции 001–011
 │   ├── config.toml             # локальный Supabase CLI
 │   └── run-migration.mjs       # раннер миграций
 ├── vercel.json (в корне репо)  # сборка из app/
@@ -167,23 +167,40 @@ app/
 
 ## Деплой
 
-`/vercel.json` в корне репозитория уже настроен на сборку подкаталога `app/`:
+Прод: **https://crm-happyday.vercel.app** (проект Vercel `crm-happyday`, не связан с Git —
+деплой запускается из CLI).
 
-```json
-{
-  "buildCommand": "cd app && npm run build",
-  "installCommand": "cd app && npm install",
-  "framework": "sveltekit"
-}
+Деплой выполняется **из каталога `app/`**:
+
+```sh
+cd app
+npx vercel deploy --prod        # или vercel deploy --prod, если CLI установлен
 ```
 
-1. Импортировать репозиторий в Vercel (корень — репозиторий, не `app/`).
-2. В Settings → Environment Variables добавить `PUBLIC_SUPABASE_URL`,
-   `PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (и `SUPABASE_DB_PASSWORD`,
-   если планируете запускать миграции из CI).
-3. Миграции БД автоматически не применяются — их выполняют вручную/SQL-скриптом.
-4. Домен и проект Supabase Auth: добавить production-URL в настройки Auth
-   (Site URL / Redirect URLs для сброса пароля).
+Почему из `app/`: SvelteKit собирается `@sveltejs/adapter-vercel` и кладёт артефакт
+в `app/.vercel/output`. Если запускать деплой из корня репозитория, Vercel ищет
+output в корне и падает с `No Output Directory named "public"`.
+
+Корневой `/vercel.json` (`buildCommand: cd app && npm run build`) остался от git-сценария
+и для CLI-деплоя из корня не работает. Если понадобится подключить Git — задать в
+настройках проекта **Root Directory = `app`** и удалить корневой `vercel.json`,
+иначе команды `cd app` будут применяться дважды.
+
+Environment Variables проекта (Dashboard → Settings → Environment Variables):
+
+| Переменная | Где взять |
+|---|---|
+| `PUBLIC_SUPABASE_URL` | Project Settings → API (URL проекта) |
+| `PUBLIC_SUPABASE_ANON_KEY` | Project Settings → API keys → Publishable key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Project Settings → API keys → Secret key (server-only) |
+| `SUPABASE_DB_PASSWORD` | Settings → Database (только для скрипта миграций) |
+
+После смены переменных нужен redeploy — существующие деплои используют значения,
+зафиксированные при сборке.
+
+Миграции БД автоматически не применяются: `node supabase/run-migration.mjs`.
+Не забыть добавить production-URL в Supabase Auth → Site URL / Redirect URLs
+(сброс пароля, magic link).
 
 ## Документация
 
