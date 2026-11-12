@@ -1,9 +1,29 @@
 // Migration runner — applies SQL migrations against Supabase PostgreSQL.
-// Reads DB password from .env (SUPABASE_DB_PASSWORD) or 1st CLI argument.
-// Usage:
-//   node supabase/run-migration.mjs              → run all pending
-//   node supabase/run-migration.mjs 004          → run specific migration
-//   node supabase/run-migration.mjs 004 pass     → with explicit password
+//
+// Usage (запускать из каталога app/):
+//   node supabase/run-migration.mjs                     → применить все неприменённые миграции
+//   node supabase/run-migration.mjs 004                 → применить только 004_*.sql
+//   node supabase/run-migration.mjs 004 --password=xxx  → то же + пароль БД явным флагом
+//
+// Единственный позиционный аргумент — префикс имени файла миграции (обычно 3 цифры).
+// Пароль БД берётся ТОЛЬКО из:
+//   1) переменной окружения SUPABASE_DB_PASSWORD (в т.ч. загруженной из app/.env), либо
+//   2) флага --password=...
+// Позиционные аргументы больше НЕ используются как пароль (это была ошибка:
+// `node supabase/run-migration.mjs 004` подставлял строку "004" в connection string).
+//
+// Требуется пакет `pg` (уже в dependencies) и доступ к Postgres на порт 5432
+// (transaction pooler 6543 не пропускает DDL/CREATE FUNCTION).
+//
+// Проект определяется автоматически из PUBLIC_SUPABASE_URL (`https://<ref>.supabase.co`).
+// Переопределения (нужны, если db.<ref>.supabase.co не резолвится — используйте
+// Session pooler из Dashboard → Settings → Database):
+//   SUPABASE_PROJECT_REF, SUPABASE_DB_HOST, SUPABASE_DB_PORT,
+//   SUPABASE_DB_USER (для pooler — postgres.<ref>), SUPABASE_DB_NAME
+//
+// Пример для pooler:
+//   SUPABASE_DB_HOST=aws-0-eu-central-1.pooler.supabase.com \
+//   node supabase/run-migration.mjs 009 --password=... 
 
 import pg from 'pg';
 import fs from 'fs';
@@ -30,48 +50,110 @@ function loadEnv() {
 }
 loadEnv();
 
-// ---- Config ----
-const PROJECT_REF = 'jioeuhpqhvszkjteyveh';
-const DB_PASSWORD = process.argv[2] || process.env.SUPABASE_DB_PASSWORD || null;
-const TARGET = process.argv[3] || process.argv[2] || null; // arg can be migration number
+// ---- CLI parsing ----
+// Один неоднозначный аргумент: [migration-prefix] [--password=...]
+const usage = `Usage:
+  node supabase/run-migration.mjs                     # все неприменённые миграции
+  node supabase/run-migration.mjs 004                 # только 004_*.sql
+  node supabase/run-migration.mjs 004 --password=xxx  # пароль флагом
 
-// Normalise: if 1st arg is a migration number, treat 2nd as password
-let password = DB_PASSWORD;
+Пароль БД также можно задать переменной окружения SUPABASE_DB_PASSWORD
+(например, в app/.env — файл читается автоматически).`;
+
 let targetMig = null;
-for (const a of process.argv.slice(2)) {
-	if (/^\d{3}$/.test(a)) { targetMig = a; }
-	else if (a && !a.startsWith('-')) { password = a; }
+let passwordFlag = null;
+
+for (const arg of process.argv.slice(2)) {
+	if (arg === '--help' || arg === '-h') {
+		console.log(usage);
+		process.exit(0);
+	} else if (arg.startsWith('--password=')) {
+		passwordFlag = arg.slice('--password='.length);
+		if (!passwordFlag) {
+			console.error('❌ --password= требует непустое значение.');
+			console.error(usage);
+			process.exit(1);
+		}
+	} else if (arg.startsWith('-')) {
+		console.error(`❌ Неизвестный флаг: ${arg}`);
+		console.error(usage);
+		process.exit(1);
+	} else if (targetMig !== null) {
+		console.error(`❌ Лишний позиционный аргумент: ${arg}`);
+		console.error('   Пароль передаётся только через SUPABASE_DB_PASSWORD или --password=...');
+		console.error(usage);
+		process.exit(1);
+	} else {
+		targetMig = arg;
+	}
 }
 
-if (!password) {
-	console.error('❌ DB password not set. Either:');
-	console.error('   1. Add SUPABASE_DB_PASSWORD=yourpass to app/.env');
-	console.error('   2. Or pass as argument: node supabase/run-migration.mjs YOURPASS 004');
+// ---- Config ----
+// Проект определяется по PUBLIC_SUPABASE_URL (https://<ref>.supabase.co) —
+// отдельно хардкодить ref больше не нужно. Любой параметр подключения можно
+// переопределить через окружение: новые проекты Supabase не всегда отдают
+// db.<ref>.supabase.co, и тогда нужен session pooler (5432), у которого
+// другой хост и пользователь postgres.<ref>.
+function refFromUrl(url) {
+	if (!url) return null;
+	try {
+		const host = new URL(url).hostname;
+		const m = /^([a-z0-9]+)\.supabase\.co$/i.exec(host);
+		return m ? m[1] : null;
+	} catch {
+		return null;
+	}
+}
+
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || refFromUrl(process.env.PUBLIC_SUPABASE_URL);
+if (!PROJECT_REF) {
+	console.error('❌ Не удалось определить ref проекта.');
+	console.error('   Задайте PUBLIC_SUPABASE_URL=https://<ref>.supabase.co в app/.env');
+	console.error('   либо SUPABASE_PROJECT_REF=<ref>.');
 	process.exit(1);
 }
 
-// Direct PostgreSQL connection (bypasses pooler, supports DDL).
-// Use this for migrations; the pooler blocks CREATE FUNCTION etc.
-const connectionString = `postgresql://postgres.${PROJECT_REF}:${encodeURIComponent(password)}@db.${PROJECT_REF}.supabase.co:5432/postgres`;
+const DB_HOST = process.env.SUPABASE_DB_HOST || `db.${PROJECT_REF}.supabase.co`;
+const DB_PORT = process.env.SUPABASE_DB_PORT || '5432';
+const DB_USER = process.env.SUPABASE_DB_USER || `postgres.${PROJECT_REF}`;
+const DB_NAME = process.env.SUPABASE_DB_NAME || 'postgres';
+const password = passwordFlag || process.env.SUPABASE_DB_PASSWORD || null;
+
+if (!password) {
+	console.error('❌ Пароль БД не задан. Один из вариантов:');
+	console.error('   1. Добавить SUPABASE_DB_PASSWORD=yourpass в app/.env (или в окружение)');
+	console.error('   2. Передать флагом: node supabase/run-migration.mjs 004 --password=yourpass');
+	process.exit(1);
+}
+
+// Прямое подключение к Postgres: DDL и CREATE FUNCTION через transaction
+// pooler (6543) не проходят, поэтому по умолчанию порт 5432.
+const connectionString = `postgresql://${DB_USER}:${encodeURIComponent(password)}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+console.log(`🔗 Проект ${PROJECT_REF} → ${DB_HOST}:${DB_PORT} (${DB_USER})`);
 
 // Discover migration files sorted by name
 const migrationsDir = path.join(__dirname, 'migrations');
-const files = fs.readdirSync(migrationsDir)
-	.filter(f => f.endsWith('.sql'))
+let files = fs.readdirSync(migrationsDir)
+	.filter((f) => f.endsWith('.sql'))
 	.sort();
 
 if (targetMig) {
-	const match = files.find(f => f.startsWith(targetMig));
-	if (!match) {
-		console.error(`❌ Migration ${targetMig} not found in ${migrationsDir}`);
+	const matches = files.filter((f) => f.startsWith(targetMig));
+	if (matches.length === 0) {
+		console.error(`❌ Миграция с префиксом "${targetMig}" не найдена в ${migrationsDir}`);
 		process.exit(1);
 	}
-	files.length = 0;
-	files.push(match);
+	if (matches.length > 1) {
+		console.error(`❌ Префикс "${targetMig}" неоднозначен, подходят несколько файлов:`);
+		for (const m of matches) console.error(`   - ${m}`);
+		console.error('   Укажите более длинный префикс, например 004_atomic.');
+		process.exit(1);
+	}
+	files = matches;
 }
 
 if (files.length === 0) {
-	console.log('ℹ️  No migration files found.');
+	console.log('ℹ️  Файлы миграций не найдены.');
 	process.exit(0);
 }
 
@@ -125,7 +207,7 @@ try {
 	console.log('\n🔍 Verification:');
 	const { rows: funcs } = await client.query(`
 		SELECT routine_name FROM information_schema.routines
-		WHERE routine_name IN ('change_order_status', 'submit_order_form')
+		WHERE routine_name IN ('change_order_status', 'submit_order_form', 'is_admin')
 		ORDER BY routine_name
 	`);
 	for (const f of funcs) {
