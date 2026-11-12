@@ -1,8 +1,8 @@
-import { supabase } from '$lib/supabase.server';
+import { supabaseAdmin } from '$lib/supabase-admin.server';
 import type { CreateClient } from '$lib/schemas';
 
 export async function getClients() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('clients')
     .select('*')
     .order('name');
@@ -12,7 +12,7 @@ export async function getClients() {
 }
 
 export async function createClient(input: CreateClient, userId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('clients')
     .insert({ ...input, created_by: userId })
     .select()
@@ -23,7 +23,7 @@ export async function createClient(input: CreateClient, userId: string) {
 }
 
 export async function updateClient(id: string, input: Partial<CreateClient>) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('clients')
     .update(input)
     .eq('id', id)

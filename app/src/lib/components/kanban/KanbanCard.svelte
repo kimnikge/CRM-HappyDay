@@ -6,7 +6,11 @@
      * guest count, format tag, total cost, urgent indicator,
      * manager initials.
      *
-     * Draggable by default. Left accent bar via `.format-dot`.
+     * Desktop: native HTML5 drag & drop (draggable attribute).
+     * Touch/pen: Pointer Events fallback — a horizontal gesture (>8px and
+     * more horizontal than vertical) starts a drag so that vertical page
+     * scrolling keeps working. Pointer capture keeps receiving moves, the
+     * board resolves the column under the finger via elementFromPoint.
      */
     import Tag from "$lib/components/ui/Tag.svelte";
     import { CURRENCY_LOCALE, CURRENCY_SUFFIX } from "$lib/config";
@@ -15,6 +19,11 @@
         order,
         onClick,
         draggable = true,
+        dragging = false,
+        onDragBegin,
+        onDragMove,
+        onDragEnd,
+        onDragCancel,
     }: {
         order: {
             id: string;
@@ -34,11 +43,80 @@
         };
         onClick?: (id: string) => void;
         draggable?: boolean;
+        /** True while this card is being dragged via pointer events. */
+        dragging?: boolean;
+        onDragBegin?: (id: string) => void;
+        onDragMove?: (id: string, clientX: number, clientY: number) => void;
+        onDragEnd?: (id: string, clientX: number, clientY: number) => void;
+        onDragCancel?: () => void;
     } = $props();
 
     const initials = $derived(
         order.profiles?.initials || order.profiles?.full_name?.charAt(0) || "?",
     );
+
+    // ---- Pointer drag (touch/pen only — mouse keeps native HTML5 DnD) ----
+    let activePointerId: number | null = null;
+    let startX = 0;
+    let startY = 0;
+    let dragActive = false;
+    /** Swallow the synthetic click that follows a real pointer drag. */
+    let suppressClick = false;
+
+    function handlePointerDown(e: PointerEvent) {
+        if (!draggable) return;
+        // Desktop mouse keeps using HTML5 drag & drop.
+        if (e.pointerType === "mouse") return;
+        if (e.button !== 0) return;
+        activePointerId = e.pointerId;
+        startX = e.clientX;
+        startY = e.clientY;
+        dragActive = false;
+        suppressClick = false;
+    }
+
+    function handlePointerMove(e: PointerEvent) {
+        if (activePointerId !== e.pointerId) return;
+
+        if (!dragActive) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            // Start only on a clearly horizontal gesture, so vertical
+            // page scroll is not hijacked.
+            if (Math.abs(dx) <= 8 || Math.abs(dx) <= Math.abs(dy)) return;
+
+            dragActive = true;
+            suppressClick = true;
+            (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+            document.body.style.userSelect = "none";
+            onDragBegin?.(order.id);
+        }
+
+        e.preventDefault();
+        onDragMove?.(order.id, e.clientX, e.clientY);
+    }
+
+    function finishPointer(e: PointerEvent, cancelled: boolean) {
+        if (activePointerId !== e.pointerId) return;
+        const wasActive = dragActive;
+        activePointerId = null;
+        dragActive = false;
+        document.body.style.userSelect = "";
+        if (!wasActive) return;
+        if (cancelled) {
+            onDragCancel?.();
+        } else {
+            onDragEnd?.(order.id, e.clientX, e.clientY);
+        }
+    }
+
+    function handlePointerUp(e: PointerEvent) {
+        finishPointer(e, false);
+    }
+
+    function handlePointerCancel(e: PointerEvent) {
+        finishPointer(e, true);
+    }
 
     function fmtCurrency(n: number | null | undefined): string {
         if (n == null) return "—";
@@ -69,13 +147,17 @@
     }
 
     function handleClick() {
+        if (suppressClick) {
+            suppressClick = false;
+            return;
+        }
         onClick?.(order.id);
     }
 
     function handleKeydown(e: KeyboardEvent) {
         if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            handleClick();
+            onClick?.(order.id);
         }
     }
 
@@ -100,9 +182,15 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <button
-    class="kanban-card group relative flex w-full cursor-pointer overflow-hidden rounded-md bg-paper text-left shadow-card transition-shadow duration-200 hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 border-0 p-0"
+    class="kanban-card group relative flex w-full touch-pan-y select-none cursor-pointer overflow-hidden rounded-md bg-paper text-left shadow-card transition-shadow duration-200 hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 border-0 p-0 {dragging
+        ? 'pointer-events-none z-10 cursor-grabbing opacity-70 shadow-card-hover scale-[1.02]'
+        : ''}"
     {draggable}
     ondragstart={dragStart}
+    onpointerdown={handlePointerDown}
+    onpointermove={handlePointerMove}
+    onpointerup={handlePointerUp}
+    onpointercancel={handlePointerCancel}
     onclick={handleClick}
     onkeydown={handleKeydown}
 >

@@ -9,6 +9,7 @@
     let users = $state<any[]>([]);
     let loading = $state(true);
     let error = $state("");
+    let success = $state("");
 
     async function load() {
         const { data } = await supabase
@@ -20,16 +21,34 @@
     }
 
     async function toggleRole(userId: string, newRole: string) {
+        error = "";
+        success = "";
+
         const { error: err } = await supabase
             .from("profiles")
             .update({ role: newRole })
             .eq("id", userId);
 
         if (err) {
-            error = err.message;
+            error = `Не удалось изменить роль: ${err.message}`;
         } else {
-            load();
+            success =
+                newRole === "admin"
+                    ? "Пользователь активирован"
+                    : "Пользователь отключён";
+            await load();
+            setTimeout(() => (success = ""), 3000);
         }
+    }
+
+    async function disableUser(userId: string, userName: string) {
+        if (
+            !confirm(
+                `Отключить пользователя «${userName}»? Он потеряет доступ к CRM.`,
+            )
+        )
+            return;
+        await toggleRole(userId, "pending");
     }
 
     async function deleteUser(userId: string, userName: string) {
@@ -67,8 +86,18 @@
         {#if error}
             <div
                 class="mb-4 rounded-md bg-alert/10 border border-alert/20 p-3 text-sm text-alert"
+                role="alert"
             >
                 {error}
+            </div>
+        {/if}
+
+        {#if success}
+            <div
+                class="mb-4 rounded-md bg-mint/10 border border-mint/20 p-3 text-sm text-mint"
+                role="status"
+            >
+                {success}
             </div>
         {/if}
 
@@ -158,7 +187,7 @@
                                             variant="secondary"
                                             size="sm"
                                             onclick={() =>
-                                                toggleRole(u.id, "pending")}
+                                                disableUser(u.id, u.full_name)}
                                         >
                                             Отключить
                                         </Button>

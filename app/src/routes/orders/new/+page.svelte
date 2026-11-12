@@ -20,6 +20,11 @@
     let loading = $state(false);
     let error = $state("");
 
+    // Snapshot of the selected client's persisted contact data. Only fields the
+    // user actually changed are written back on submit — never wipe real data
+    // with empty inputs.
+    let selectedClient: any = null;
+
     const formats = FORMATS.map((f) => f.value).filter(Boolean);
 
     async function loadClients() {
@@ -35,11 +40,14 @@
         if (clientId) {
             const client = clients.find((c) => c.id === clientId);
             if (client) {
+                selectedClient = client;
                 companyName = client.name || "";
                 contactPerson = client.contact_person || "";
                 phone = client.phone || "";
                 email = client.email || "";
             }
+        } else {
+            selectedClient = null;
         }
     });
 
@@ -51,45 +59,101 @@
         loading = true;
         error = "";
 
-        // Get draft status ID first
-        const { data: draftStatus } = await supabase
+        const {
+            data: { session },
+        } = await supabase.auth.getSession();
+        const managerId = session?.user?.id ?? null;
+
+        // Without a manager the order would show «?» initials and never match
+        // the manager filter — don't create it in a broken state.
+        if (!managerId) {
+            error =
+                "Сессия не найдена. Войдите заново, чтобы создать заказ.";
+            loading = false;
+            return;
+        }
+
+        // Resolve the draft status first — an order with a null status would
+        // silently disappear from the kanban, so abort instead of inserting it.
+        const { data: draftStatus, error: statusErr } = await supabase
             .from("statuses")
             .select("id")
             .eq("name", "Черновик")
             .single();
 
-        // If new client name is typed but no client selected, create client first
+        if (statusErr || !draftStatus) {
+            error =
+                "Не удалось определить начальный статус «Черновик». Заказ не создан — обратитесь к администратору.";
+            loading = false;
+            return;
+        }
+
+        // New client: create it first (with the author).
         let cId = clientId;
-        if (!cId && companyName.trim()) {
-            const { data: client } = await supabase
+        let createdClient = false;
+        if (!cId) {
+            const { data: client, error: clientErr } = await supabase
                 .from("clients")
                 .insert({
                     name: companyName.trim(),
                     contact_person: contactPerson,
                     phone,
                     email,
+                    created_by: managerId,
                 })
                 .select("id")
                 .single();
-            if (client) cId = client.id;
+
+            if (clientErr || !client) {
+                error =
+                    clientErr?.message || "Не удалось создать клиента";
+                loading = false;
+                return;
+            }
+            cId = client.id;
+            createdClient = true;
+            // Keep the new client referenced so a retry doesn't duplicate it.
+            clientId = cId;
+            selectedClient = {
+                id: cId,
+                name: companyName.trim(),
+                contact_person: contactPerson,
+                phone,
+                email,
+            };
         }
 
-        // If existing client selected, update their contact info (phone may have changed)
-        if (cId) {
-            await supabase
-                .from("clients")
-                .update({
-                    contact_person: contactPerson || null,
-                    phone: phone || null,
-                    email: email || null,
-                })
-                .eq("id", cId);
+        // Existing client: patch only the contact fields the user edited.
+        // Empty/unchanged inputs must not overwrite stored data.
+        if (!createdClient) {
+            const original = selectedClient?.id === cId ? selectedClient : null;
+            const patch: Record<string, string | null> = {};
+            if (!original || contactPerson !== (original.contact_person || "")) {
+                patch.contact_person = contactPerson || null;
+            }
+            if (!original || phone !== (original.phone || "")) {
+                patch.phone = phone || null;
+            }
+            if (!original || email !== (original.email || "")) {
+                patch.email = email || null;
+            }
+            if (Object.keys(patch).length > 0) {
+                const { error: patchErr } = await supabase
+                    .from("clients")
+                    .update(patch)
+                    .eq("id", cId);
+                if (patchErr) {
+                    error = `Не удалось обновить контакты клиента: ${patchErr.message}`;
+                    loading = false;
+                    return;
+                }
+            }
         }
 
         const { data: order, error: err } = await supabase
             .from("orders")
             .insert({
-                client_id: cId || null,
+                client_id: cId,
                 company_name: companyName.trim(),
                 contact_person: contactPerson,
                 phone,
@@ -97,30 +161,44 @@
                 event_date: eventDate || null,
                 format: format || null,
                 guest_count: guestCount,
-                status_id: draftStatus?.id ?? null,
+                status_id: draftStatus.id,
+                manager_id: managerId,
             })
             .select("id")
             .single();
 
-        if (err) {
-            error = err.message;
+        if (err || !order) {
+            error = createdClient
+                ? `Клиент «${companyName.trim()}» уже сохранён, но заказ создать не удалось: ${err?.message ?? "неизвестная ошибка"}. При повторной попытке клиент не задублируется.`
+                : err?.message || "Не удалось создать заказ";
             loading = false;
             return;
         }
 
-        // Record initial status in history
-        if (draftStatus && order) {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
-            await supabase.from("status_history").insert({
-                order_id: order.id,
-                new_status_id: draftStatus.id,
-                changed_by: session?.user?.id,
-            });
+        // Record initial status in history. A failure here must not block the
+        // order creation that already succeeded.
+        try {
+            const { error: historyErr } = await supabase
+                .from("status_history")
+                .insert({
+                    order_id: order.id,
+                    new_status_id: draftStatus.id,
+                    changed_by: managerId,
+                });
+            if (historyErr) {
+                console.warn(
+                    "[orders/new] status_history insert failed:",
+                    historyErr.message,
+                );
+            }
+        } catch (historyErr) {
+            console.warn(
+                "[orders/new] status_history insert failed:",
+                historyErr,
+            );
         }
 
-        goto(`/orders/${order!.id}`);
+        goto(`/orders/${order.id}`);
     }
 
     onMount(() => {

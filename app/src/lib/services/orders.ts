@@ -1,4 +1,4 @@
-import { supabase } from '$lib/supabase.server';
+import { supabaseAdmin } from '$lib/supabase-admin.server';
 import type { CreateOrder, UpdateOrder, ChangeStatus } from '$lib/schemas';
 
 // ---- Constants ----
@@ -9,7 +9,7 @@ const APPROVAL_ORDER_INDEX = 1; // На согласовании
 
 /** Get status ID by order_index (uses index, faster than name lookup) */
 async function getStatusIdByIndex(orderIndex: number): Promise<string> {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from('statuses')
 		.select('id')
 		.eq('order_index', orderIndex)
@@ -28,7 +28,7 @@ export async function getOrders(filters?: {
 	page?: number;
 	pageSize?: number;
 }) {
-	let query = supabase
+	let query = supabaseAdmin
 		.from('orders')
 		.select(
 			'*, clients(name), statuses!inner(name, order_index), profiles!orders_manager_id_fkey(full_name, initials)',
@@ -60,7 +60,7 @@ export async function getOrders(filters?: {
 }
 
 export async function getOrderById(id: string) {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from('orders')
 		.select('*, clients(*), statuses(*), profiles!orders_manager_id_fkey(full_name, initials)')
 		.eq('id', id)
@@ -73,7 +73,7 @@ export async function getOrderById(id: string) {
 export async function createOrder(input: CreateOrder, managerId: string) {
 	const draftStatusId = await getStatusIdByIndex(DRAFT_ORDER_INDEX);
 
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from('orders')
 		.insert({
 			...input,
@@ -86,7 +86,7 @@ export async function createOrder(input: CreateOrder, managerId: string) {
 	if (error) throw error;
 
 	// Record initial status in history
-	await supabase.from('status_history').insert({
+	await supabaseAdmin.from('status_history').insert({
 		order_id: data.id,
 		new_status_id: draftStatusId,
 		changed_by: managerId,
@@ -96,7 +96,7 @@ export async function createOrder(input: CreateOrder, managerId: string) {
 }
 
 export async function updateOrder(id: string, input: UpdateOrder) {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from('orders')
 		.update(input)
 		.eq('id', id)
@@ -113,7 +113,7 @@ export async function updateOrder(id: string, input: UpdateOrder) {
  * with row-level locking to prevent race conditions.
  */
 export async function changeOrderStatus(orderId: string, input: ChangeStatus, userId: string) {
-	const { data, error } = await supabase.rpc('change_order_status', {
+	const { data, error } = await supabaseAdmin.rpc('change_order_status', {
 		p_order_id: orderId,
 		p_new_status_id: input.status_id,
 		p_user_id: userId,
@@ -125,13 +125,13 @@ export async function changeOrderStatus(orderId: string, input: ChangeStatus, us
 }
 
 export async function deleteOrder(id: string) {
-	const { error } = await supabase.from('orders').delete().eq('id', id);
+	const { error } = await supabaseAdmin.from('orders').delete().eq('id', id);
 	if (error) throw error;
 }
 
 // ---- Kanban summary ----
 export async function getKanbanSummary() {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from('statuses')
 		.select(`
 			id, name, order_index,

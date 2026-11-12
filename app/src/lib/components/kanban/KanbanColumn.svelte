@@ -3,7 +3,8 @@
      * KanbanColumn — single status column on the dashboard.
      *
      * Renders a header (name + count + total sum) and a list of KanbanCards.
-     * Accepts drop events for drag-and-drop status change.
+     * Accepts drop events for drag-and-drop status change (HTML5 on desktop,
+     * Pointer Events fallback on touch — both resolved by the board).
      */
     import KanbanCard from "./KanbanCard.svelte";
     import { CURRENCY_LOCALE, CURRENCY_SUFFIX } from "$lib/config";
@@ -29,11 +30,25 @@
         orders,
         onCardClick,
         onDrop,
+        draggingOrderId = null,
+        isDropTarget = false,
+        onDragBegin,
+        onDragMove,
+        onDragEnd,
+        onDragCancel,
     }: {
         status: { id: string; name: string; order_index: number };
         orders: Order[];
         onCardClick?: (orderId: string) => void;
         onDrop?: (orderId: string, newStatusId: string) => void;
+        /** Id of the order currently dragged with pointer events, if any. */
+        draggingOrderId?: string | null;
+        /** True when a pointer drag hovers over this column. */
+        isDropTarget?: boolean;
+        onDragBegin?: (orderId: string) => void;
+        onDragMove?: (orderId: string, clientX: number, clientY: number) => void;
+        onDragEnd?: (orderId: string, clientX: number, clientY: number) => void;
+        onDragCancel?: () => void;
     } = $props();
 
     const tempClasses: Record<number, string> = {
@@ -78,9 +93,10 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-    class="kanban-col flex w-64 sm:w-72 shrink-0 snap-start flex-col rounded-md bg-neutral-100 shadow-column {tempClass(
+    class="kanban-col flex w-64 sm:w-72 shrink-0 snap-start flex-col rounded-md bg-neutral-100 shadow-column transition-shadow duration-150 {tempClass(
         status.order_index,
-    )}"
+    )} {isDropTarget ? 'ring-2 ring-inset ring-signal' : ''}"
+    data-status-id={status.id}
     ondragover={handleDragOver}
     ondragenter={handleDragEnter}
     ondrop={handleDrop}
@@ -109,7 +125,15 @@
     <!-- Cards -->
     <div class="flex flex-col gap-2 px-2 pb-2 min-h-16">
         {#each orders as order (order.id)}
-            <KanbanCard {order} onClick={onCardClick} />
+            <KanbanCard
+                {order}
+                onClick={onCardClick}
+                dragging={draggingOrderId === order.id}
+                {onDragBegin}
+                {onDragMove}
+                {onDragEnd}
+                {onDragCancel}
+            />
         {/each}
         {#if orders.length === 0}
             <p

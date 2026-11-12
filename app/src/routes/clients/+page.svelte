@@ -4,7 +4,6 @@
     import Header from "$lib/components/Header.svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import Input from "$lib/components/ui/Input.svelte";
-    import { goto } from "$app/navigation";
 
     let clients = $state<any[]>([]);
     let search = $state("");
@@ -126,11 +125,6 @@
         }
     }
 
-    function viewOrders(clientId: string) {
-        // Just go to dashboard — search by company name would be ideal
-        goto("/");
-    }
-
     onMount(load);
 </script>
 
@@ -239,7 +233,9 @@
                                         class="text-alert hover:opacity-70 text-xs bg-transparent border-0 p-0 cursor-pointer min-w-8 min-h-8"
                                         onclick={() =>
                                             deleteClient(c.id, c.name)}
-                                        title="Удалить">✕</button
+                                        title="Удалить"
+                                        aria-label={`Удалить клиента ${c.name}`}
+                                        >✕</button
                                     >
                                 </td>
                             </tr>

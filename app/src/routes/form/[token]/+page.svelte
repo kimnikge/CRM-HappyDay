@@ -15,6 +15,7 @@
     const token = $derived($page.params.token);
 
     let loading = $state(true);
+    let submitting = $state(false);
     let submitted = $state(false);
     let companyName = $state("");
     let error = $state("");
@@ -72,8 +73,10 @@
 
     async function handleSubmit(e: Event) {
         e.preventDefault();
+        if (submitting) return;
         formErrors = [];
-        loading = true;
+        error = "";
+        submitting = true;
 
         const body: Record<string, unknown> = {
             ...f,
@@ -101,8 +104,9 @@
         } catch {
             error =
                 "Ошибка при отправке. Попробуйте ещё раз или свяжитесь с менеджером.";
+        } finally {
+            submitting = false;
         }
-        loading = false;
     }
 </script>
 
@@ -111,7 +115,7 @@
 </svelte:head>
 
 <main class="min-h-screen bg-neutral-50">
-    {#if loading && !submitted}
+    {#if loading}
         <div class="flex min-h-screen items-center justify-center">
             <p class="text-neutral-500 animate-pulse">Загрузка формы...</p>
         </div>
@@ -165,7 +169,11 @@
                 </div>
             {/if}
 
-            <form onsubmit={handleSubmit} class="space-y-6">
+            <form onsubmit={handleSubmit} class="space-y-6" aria-busy={submitting}>
+                <fieldset
+                    disabled={submitting}
+                    class="space-y-6 min-w-0 border-0 p-0 m-0 disabled:opacity-70 transition-opacity duration-150"
+                >
                 <!-- 1. Основные параметры -->
                 <FormSection title="Основные параметры">
                     <FormField
@@ -334,13 +342,20 @@
                         rows={2}
                     />
                 </FormSection>
+                </fieldset>
 
                 <button
                     type="submit"
-                    disabled={loading}
-                    class="w-full rounded-md bg-signal py-3.5 text-base font-medium text-white hover:bg-signal-strong disabled:opacity-50 transition-colors duration-150"
+                    disabled={submitting}
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-signal py-3.5 text-base font-medium text-white hover:bg-signal-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
-                    {loading ? "Отправка..." : "Отправить форму"}
+                    {#if submitting}
+                        <span
+                            class="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                            aria-hidden="true"
+                        ></span>
+                    {/if}
+                    {submitting ? "Отправка..." : "Отправить форму"}
                 </button>
                 <p class="text-center text-xs text-neutral-400">
                     * — обязательные поля. После отправки форма будет

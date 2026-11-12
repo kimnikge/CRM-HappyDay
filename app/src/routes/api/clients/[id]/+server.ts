@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { updateClient } from '$lib/services/clients';
 import { createClientSchema } from '$lib/schemas';
 import { safeParse, requireAuth, safeService } from '$lib/api-helpers.server';
-import { supabase } from '$lib/supabase.server';
+import { supabaseAdmin } from '$lib/supabase-admin.server';
 import type { RequestHandler } from './$types';
 
 // PATCH /api/clients/{id}
@@ -24,7 +24,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
   if (authError) return authError;
 
   const [, svcError] = await safeService(async () => {
-    const { error } = await supabase.from('clients').delete().eq('id', params.id);
+    const { error } = await supabaseAdmin.from('clients').delete().eq('id', params.id);
     if (error) throw error;
     return true;
   });

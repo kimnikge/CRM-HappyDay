@@ -38,36 +38,48 @@
         min?: number;
     } = $props();
 
-    // Bridge: HTML inputs work with strings, convert null ↔ ""
-    // NOTE: never pass undefined through bind: — Svelte 5 throws props_invalid_value
-    // when bind:value={undefined} is used on a prop with a fallback value.
-    let inputValue = $state(value == null ? "" : String(value));
-    $effect(() => {
-        inputValue = value == null ? "" : String(value);
-    });
-    $effect(() => {
-        value = inputValue === "" ? null : inputValue;
-    });
+    // Text-like and numeric fields are bound straight through to `value`:
+    // Input owns the conversion (a number field writes a number, or null when
+    // empty; date/time/text stay strings), so no effect bridge is needed and
+    // numeric values are never flattened to strings.
+    //
+    // <select> and <textarea> only speak strings, so they get a one-way
+    // string view of `value` plus an explicit write on user input — still no
+    // write-back effect, hence no feedback loop.
+    const stringValue = $derived(value == null ? "" : String(value));
+
+    function onSelectChange(e: Event) {
+        const target = e.target;
+        if (target instanceof HTMLSelectElement) value = target.value;
+    }
+
+    function onTextareaInput(e: Event) {
+        value = (e.currentTarget as HTMLTextAreaElement).value;
+    }
 
     const id = `ff-${crypto.randomUUID().slice(0, 8)}`;
 </script>
 
 <div class={cols ? "col-span-full" : ""}>
     {#if type === "select"}
-        <Select
-            {label}
-            bind:value={inputValue}
-            {required}
-            {options}
-            placeholder={placeholder || "—"}
-        />
+        <!-- change events bubble from the native select rendered by Select -->
+        <div onchange={onSelectChange}>
+            <Select
+                {label}
+                value={stringValue}
+                {required}
+                {options}
+                placeholder={placeholder || "—"}
+            />
+        </div>
     {:else if type === "textarea"}
         <label for={id} class="block mb-1 text-sm font-medium text-neutral-700"
             >{label}</label
         >
         <textarea
             {id}
-            bind:value={inputValue}
+            value={stringValue}
+            oninput={onTextareaInput}
             {rows}
             class="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm font-body
                    placeholder:text-neutral-400
@@ -79,7 +91,7 @@
             {label}
             {type}
             {phone}
-            bind:value={inputValue}
+            bind:value={value}
             {required}
             {placeholder}
             {min}

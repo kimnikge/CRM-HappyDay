@@ -39,13 +39,22 @@
     };
 </script>
 
+{#snippet spinner()}
+    <span
+        class="inline-block h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
+        aria-hidden="true"
+    ></span>
+{/snippet}
+
 {#if href}
     <a
         {href}
         class={`${base} ${sizeMap[size]} ${variantMap[variant]} ${full ? "w-full" : ""} no-underline`}
+        aria-busy={loading}
+        aria-disabled={loading ? "true" : undefined}
     >
         {#if loading}
-            <span aria-hidden="true" class="i-spinner"></span>
+            {@render spinner()}
         {/if}
         {@render children()}
     </a>
@@ -54,10 +63,11 @@
         {type}
         {disabled}
         {onclick}
+        aria-busy={loading}
         class={`${base} ${sizeMap[size]} ${variantMap[variant]} ${full ? "w-full" : ""}`}
     >
         {#if loading}
-            <span aria-hidden="true" class="i-spinner animate-spin"></span>
+            {@render spinner()}
         {/if}
         {@render children()}
     </button>

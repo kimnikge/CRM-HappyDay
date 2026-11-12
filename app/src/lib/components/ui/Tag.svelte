@@ -3,9 +3,9 @@
      * Tag — colored pill for format/category display.
      * E.g. <Tag format="банкет">Банкет</Tag>
      *
-     * Color auto-derived from FORMAT_COLORS config mapping.
+     * Color derived from the Tailwind format-* tokens below (kept in sync with
+     * FORMAT_COLORS/DEFAULT_FORMAT_COLOR in $lib/config).
      */
-    import { FORMAT_COLORS, DEFAULT_FORMAT_COLOR } from "$lib/config";
 
     let {
         format = "",

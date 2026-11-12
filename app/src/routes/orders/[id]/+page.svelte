@@ -12,8 +12,6 @@
     import {
         FORMATS,
         EVENT_LEVELS,
-        WATER_TYPES,
-        COFFEE_TYPES,
         DISHWARE_TYPES,
         YES_NO_OPTIONS,
     } from "$lib/config";
@@ -36,8 +34,44 @@
     let cancelReason = $state("");
     let pendingStatusId = $state<string | null>(null);
     let sendingPDF = $state(false);
+    // Select статуса — двусторонний: при отмене модалки/ошибке возвращаем реальный статус заказа
+    let selectedStatusId = $state<string | null>(null);
 
     const id = $derived($page.params.id);
+
+    // Числовые поля таблицы orders: из HTML-инпутов приходят строки
+    const NUMERIC_ORDER_FIELDS = new Set([
+        "guest_count",
+        "service_rounds",
+        "total_cost",
+        "reminder_days",
+    ]);
+
+    const SERVICE_ROUND_OPTIONS = [1, 2, 3, 4, 5, 6].map((n) => ({
+        value: String(n),
+        label: `${n} ${n === 1 ? "подход" : n < 5 ? "подхода" : "подходов"}`,
+    }));
+
+    /**
+     * Варианты «подходов к столу»: в БД это INTEGER, поэтому только числа.
+     * Устаревшее нечисловое значение (например «непрерывно») показываем отдельной
+     * опцией, чтобы селект не выглядел пустым; при сохранении оно уйдёт в null.
+     */
+    const serviceRoundsOptions = $derived.by(() => {
+        const current = order?.service_rounds;
+        if (current == null || current === "") return SERVICE_ROUND_OPTIONS;
+        const value = String(current);
+        if (SERVICE_ROUND_OPTIONS.some((o) => o.value === value)) {
+            return SERVICE_ROUND_OPTIONS;
+        }
+        return [
+            { value, label: `устаревшее значение: ${value}` },
+            ...SERVICE_ROUND_OPTIONS,
+        ];
+    });
+
+    /** id заказа, данные которого уже загружены (защита от двойной загрузки) */
+    let loadedOrderId: string | undefined = undefined;
 
     // ---- Helpers ----
 
@@ -76,27 +110,73 @@
         return Object.keys(shape);
     }
 
-    /** Extract only the fields defined in updateOrderSchema from the order object */
+    /** Приводим числовое значение из HTML-инпута к number или null */
+    function toNullableNumber(value: unknown): number | null {
+        if (value == null) return null;
+        if (typeof value === "number") return Number.isFinite(value) ? value : null;
+        const str = String(value).trim();
+        if (str === "") return null;
+        const num = Number(str);
+        return Number.isFinite(num) ? num : null;
+    }
+
+    /** Приводим значения из HTML-инпутов к типам Postgres: пустые строки → null, числа → number */
+    function normalizeOrderValue(key: string, value: unknown): unknown {
+        if (NUMERIC_ORDER_FIELDS.has(key)) return toNullableNumber(value);
+        if (typeof value === "string") return value.trim() === "" ? null : value;
+        return value;
+    }
+
     function buildUpdateBody(
         order: Record<string, unknown>,
     ): Record<string, unknown> {
         const body: Record<string, unknown> = {};
         for (const key of getOrderFieldNames()) {
-            if (order[key] !== undefined) body[key] = order[key];
+            if (order[key] !== undefined) {
+                body[key] = normalizeOrderValue(key, order[key]);
+            }
         }
         return body;
     }
 
+    /** Сброс локального состояния при переходе на другой заказ */
+    function resetViewState() {
+        order = null;
+        statuses = [];
+        files = [];
+        history = [];
+        error = "";
+        success = "";
+        uploadError = "";
+        formLinkCopied = false;
+        showCancelReason = false;
+        cancelReason = "";
+        pendingStatusId = null;
+        selectedStatusId = null;
+        saving = false;
+        sendingPDF = false;
+        tablesSource = "";
+        cocktailTables = null;
+        buffetTables = null;
+        tablesExtra = "";
+    }
+
     // ---- Data loading ----
     async function load() {
-        const { data } = await supabase
+        const currentId = id;
+        const { data, error: loadErr } = await supabase
             .from("orders")
             .select("*, clients(*), statuses(*)")
-            .eq("id", id)
+            .eq("id", currentId)
             .single();
-        order = data;
-        if (!order) {
-            goto("/");
+        // Пока грузились, пользователь мог уйти на другой заказ
+        if (currentId !== id) return;
+        if (loadErr || !data) {
+            if (!data) {
+                goto("/");
+            } else {
+                error = `Не удалось загрузить заказ: ${loadErr!.message}`;
+            }
             return;
         }
 
@@ -105,17 +185,20 @@
             supabase
                 .from("files")
                 .select("*")
-                .eq("order_id", id)
+                .eq("order_id", currentId)
                 .order("uploaded_at", { ascending: false }),
             supabase
                 .from("status_history")
                 .select(
                     "*, statuses:new_status_id(name), profiles:changed_by(full_name)",
                 )
-                .eq("order_id", id)
+                .eq("order_id", currentId)
                 .order("changed_at", { ascending: false }),
         ]);
+        if (currentId !== id) return;
 
+        order = data;
+        selectedStatusId = order.status_id ?? null;
         statuses = stRes.data ?? [];
         files = flRes.data ?? [];
         history = histRes.data ?? [];
@@ -123,6 +206,23 @@
         // Parse tables_info JSON into local sub-fields
         parseTablesInfo(data.tables_info);
     }
+
+    /**
+     * SvelteKit переиспользует компонент при /orders/A → /orders/B,
+     * поэтому onMount(load) сам по себе данные B не загрузит.
+     */
+    $effect(() => {
+        const currentId = id;
+        if (!currentId) return;
+        if (loadedOrderId === undefined) {
+            loadedOrderId = currentId; // первый рендер загружает onMount(load)
+            return;
+        }
+        if (loadedOrderId === currentId) return;
+        loadedOrderId = currentId;
+        resetViewState();
+        void load();
+    });
 
     // ---- Actions ----
     async function save() {
@@ -148,6 +248,7 @@
     }
 
     async function changeStatus(statusId: string) {
+        error = "";
         // G2: если статус «Отменён» — запросить причину
         const targetStatus = statuses.find((s) => s.id === statusId);
         if (targetStatus?.order_index === 6) {
@@ -157,6 +258,13 @@
             return;
         }
         await doChangeStatus(statusId, null);
+    }
+
+    /** Закрыть модалку причины отмены без изменения статуса */
+    function dismissCancelModal() {
+        showCancelReason = false;
+        pendingStatusId = null;
+        selectedStatusId = order?.status_id ?? null;
     }
 
     async function doChangeStatus(
@@ -175,22 +283,33 @@
             p_comment: cancelReasonText ?? null,
         });
 
-        if (!rpcErr && cancelReasonText) {
+        if (rpcErr) {
+            error = `Не удалось изменить статус: ${rpcErr.message}`;
+            // Возвращаем селект к реальному статусу заказа
+            selectedStatusId = order?.status_id ?? null;
+            return;
+        }
+
+        if (cancelReasonText) {
             // Also save cancel_reason on the order
-            await supabase
+            const { error: reasonErr } = await supabase
                 .from("orders")
                 .update({ cancel_reason: cancelReasonText })
                 .eq("id", id);
+            if (reasonErr) {
+                error = `Статус изменён, но причину отмены сохранить не удалось: ${reasonErr.message}`;
+            }
         }
 
-        load();
+        await load();
     }
 
     async function confirmCancel() {
+        const statusId = pendingStatusId;
         showCancelReason = false;
-        if (pendingStatusId) {
-            await doChangeStatus(pendingStatusId, cancelReason || null);
-            pendingStatusId = null;
+        pendingStatusId = null;
+        if (statusId) {
+            await doChangeStatus(statusId, cancelReason || null);
         }
     }
 
@@ -199,12 +318,17 @@
     }
 
     async function copyFormLink() {
+        error = "";
         try {
+            if (!navigator.clipboard) {
+                throw new Error("Clipboard API недоступен");
+            }
             await navigator.clipboard.writeText(getFormLink());
             formLinkCopied = true;
             setTimeout(() => (formLinkCopied = false), 2000);
         } catch {
-            // fallback: select text manually
+            // fallback: показываем ссылку, чтобы её можно было скопировать вручную
+            error = `Не удалось скопировать ссылку. Скопируйте вручную: ${getFormLink()}`;
         }
     }
 
@@ -223,7 +347,7 @@
 
         try {
             // 1. Generate PDF blob
-            const pdfBlob = generateOrderPDF(order);
+            const pdfBlob = await generateOrderPDF(order);
             const safeName = order.company_name
                 .replace(/[^a-zA-Z0-9]/g, "_")
                 .replace(/_+/g, "_")
@@ -323,16 +447,26 @@
         const v = validateFile(file);
         if (!v.valid) {
             uploadError = v.error!;
+            input.value = "";
             return;
         }
         uploadError = "";
 
         const path = `${id}/${Date.now()}_${file.name}`;
-        await supabase.storage.from("order-files").upload(path, file);
+        // Сначала грузим в Storage и только при успехе создаём запись в files
+        const { error: storageErr } = await supabase.storage
+            .from("order-files")
+            .upload(path, file);
+        if (storageErr) {
+            uploadError = `Не удалось загрузить файл: ${storageErr.message}`;
+            input.value = "";
+            return;
+        }
+
         const {
             data: { session },
         } = await supabase.auth.getSession();
-        await supabase.from("files").insert({
+        const { error: insertErr } = await supabase.from("files").insert({
             order_id: id,
             file_name: file.name,
             file_path: path,
@@ -340,25 +474,79 @@
             mime_type: file.type,
             uploaded_by: session?.user?.id,
         });
-        load();
+        if (insertErr) {
+            uploadError = `Файл загружен, но запись о нём не сохранилась: ${insertErr.message}`;
+        }
         input.value = "";
+        await load();
     }
 
     async function deleteFile(fileId: string, filePath: string) {
-        await supabase.storage.from("order-files").remove([filePath]);
-        await supabase.from("files").delete().eq("id", fileId);
-        load();
+        error = "";
+        const { error: removeErr } = await supabase.storage
+            .from("order-files")
+            .remove([filePath]);
+        if (removeErr) {
+            error = `Не удалось удалить файл: ${removeErr.message}`;
+            return;
+        }
+
+        const { error: dbErr } = await supabase
+            .from("files")
+            .delete()
+            .eq("id", fileId);
+        if (dbErr) {
+            error = `Файл удалён из хранилища, но запись осталась: ${dbErr.message}`;
+        }
+        await load();
     }
 
-    function downloadFile(filePath: string) {
-        const { data } = supabase.storage
+    /** Открыть ссылку под именем файла (download-атрибут не теряет оригинальное имя) */
+    function openFileUrl(url: string, fileName: string) {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.target = "_blank";
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    async function downloadFile(filePath: string, fileName: string) {
+        error = "";
+        // Бакет order-files приватный — публичный URL отдаёт 403, берём signed URL
+        const { data, error: signErr } = await supabase.storage
+            .from("order-files")
+            .createSignedUrl(filePath, 60);
+        if (!signErr && data?.signedUrl) {
+            openFileUrl(data.signedUrl, fileName);
+            return;
+        }
+
+        // Fallback: если подписать не удалось, пробуем публичную ссылку
+        const { data: pub } = supabase.storage
             .from("order-files")
             .getPublicUrl(filePath);
-        window.open(data.publicUrl, "_blank");
+        if (pub?.publicUrl) {
+            openFileUrl(pub.publicUrl, fileName);
+            return;
+        }
+
+        error = `Не удалось скачать файл: ${signErr?.message ?? "не удалось подписать ссылку"}`;
     }
 
-    function formatBytes(bytes: number): string {
-        return `${(bytes / 1024).toFixed(1)} KB`;
+    function formatBytes(bytes: number | null | undefined): string {
+        if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return "—";
+        if (bytes < 1024) return `${bytes} B`;
+        const units = ["KB", "MB", "GB", "TB"];
+        let value = bytes / 1024;
+        let unit = 0;
+        while (value >= 1024 && unit < units.length - 1) {
+            value /= 1024;
+            unit++;
+        }
+        return `${value.toFixed(1)} ${units[unit]}`;
     }
 
     /** Map format name to accent bar background class */
@@ -411,7 +599,7 @@
                     {currentStatus?.name ?? "—"}
                 </span>
                 <select
-                    value={order.status_id}
+                    bind:value={selectedStatusId}
                     onchange={(e) =>
                         changeStatus((e.target as HTMLSelectElement).value)}
                     class="rounded-md border border-neutral-300 px-2 py-1 text-xs font-body
@@ -420,9 +608,7 @@
                     aria-label="Изменить статус заказа"
                 >
                     {#each statuses as s}
-                        <option value={s.id} selected={s.id === order.status_id}
-                            >{s.name}</option
-                        >
+                        <option value={s.id}>{s.name}</option>
                     {/each}
                 </select>
             </div>
@@ -511,9 +697,9 @@
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div
                     class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
-                    onclick={() => (showCancelReason = false)}
+                    onclick={dismissCancelModal}
                     onkeydown={(e: KeyboardEvent) => {
-                        if (e.key === "Escape") showCancelReason = false;
+                        if (e.key === "Escape") dismissCancelModal();
                     }}
                     role="dialog"
                     aria-modal="true"
@@ -546,7 +732,7 @@
                         <div class="flex gap-2 justify-end">
                             <button
                                 class="px-4 py-2 text-sm text-neutral-600 hover:text-ink bg-transparent border-0 cursor-pointer rounded-md hover:bg-neutral-100 transition-colors duration-150"
-                                onclick={() => (showCancelReason = false)}
+                                onclick={dismissCancelModal}
                                 >Отмена</button
                             >
                             <button
@@ -633,15 +819,7 @@
                         label="Сколько подходов гостей к столу?"
                         type="select"
                         bind:value={order.service_rounds}
-                        options={[
-                            { value: "1", label: "1 подход" },
-                            { value: "2", label: "2 подхода" },
-                            { value: "3", label: "3 подхода" },
-                            {
-                                value: "непрерывно",
-                                label: "в течении всего мероприятия",
-                            },
-                        ]}
+                        options={serviceRoundsOptions}
                     />
                 </FormSection>
 
@@ -803,7 +981,10 @@
                                         <button
                                             class="text-ink hover:underline text-left truncate flex-1 bg-transparent border-0 p-0 cursor-pointer"
                                             onclick={() =>
-                                                downloadFile(f.file_path)}
+                                                downloadFile(
+                                                    f.file_path,
+                                                    f.file_name,
+                                                )}
                                             >{f.file_name}</button
                                         >
                                         <span

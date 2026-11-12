@@ -8,6 +8,11 @@
     import Button from "$lib/components/ui/Button.svelte";
     import { kanban } from "$lib/stores/kanban.svelte";
     import { auth } from "$lib/stores/auth.svelte";
+    import { CURRENCY_LOCALE, CURRENCY_SUFFIX } from "$lib/config";
+
+    function fmtCurrency(n: number): string {
+        return new Intl.NumberFormat(CURRENCY_LOCALE).format(n) + CURRENCY_SUFFIX;
+    }
 
     let searchInput = $state("");
     let initError = $state<string | null>(null);
@@ -53,15 +58,15 @@
     }
 
     async function handleStatusChange(orderId: string, newStatusId: string) {
-        const ok = await kanban.changeStatus(orderId, newStatusId);
-        if (!ok) {
-            // Status change failed — UI already rolled back by store
-        }
+        // The store applies the optimistic update, rolls it back on failure
+        // and exposes the failure via `kanban.statusError` (rendered below).
+        await kanban.changeStatus(orderId, newStatusId);
     }
 
-    // G8: Export to CSV
+    // G8: Export to CSV — exactly what the board currently shows
+    // (filtered + sorted + pending filter applied), not the raw page window.
     function exportCSV() {
-        const orders = kanban.orders;
+        const orders = filteredOrders;
         if (orders.length === 0) return;
 
         const headers = [
@@ -106,11 +111,13 @@
     const totalRevenue = $derived(
         kanban.orders.reduce((s, o) => s + (Number(o.total_cost) || 0), 0),
     );
+    // «В работе» = only В работе (3) + Выезд (4); drafts/approvals/confirmed
+    // are not in progress yet.
     const activeOrders = $derived(
         kanban.orders.filter((o) => {
             const s = kanban.statuses.find((st) => st.id === o.status_id);
             const idx = s?.order_index ?? -1;
-            return idx >= 0 && idx <= 4;
+            return idx >= 3 && idx <= 4;
         }).length,
     );
     const thisMonthOrders = $derived(
@@ -187,7 +194,7 @@
     {:else}
         <!-- Toolbar -->
         <div
-            class="sticky top-0 z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 border-b border-neutral-200 bg-paper/90 backdrop-blur px-3 sm:px-6 py-2.5"
+            class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 border-b border-neutral-200 bg-paper/90 backdrop-blur px-3 sm:px-6 py-2.5"
         >
             <div class="flex flex-wrap items-center gap-2 flex-1">
                 <input
@@ -236,6 +243,22 @@
                 </Button>
                 <Button href="/orders/new">+ Создать</Button>
             </div>
+            <!-- Status-change error surfaced from the store -->
+            {#if kanban.statusError}
+                <div
+                    class="w-full flex items-center gap-2 text-xs text-alert"
+                    role="alert"
+                >
+                    <span>{kanban.statusError}</span>
+                    <button
+                        type="button"
+                        class="bg-transparent border-0 p-0 cursor-pointer text-alert underline text-xs"
+                        onclick={() => kanban.clearStatusError()}
+                    >
+                        Скрыть
+                    </button>
+                </div>
+            {/if}
         </div>
 
         <!-- Kanban Board -->
@@ -311,14 +334,12 @@
                         class="rounded-md bg-paper p-2.5 sm:p-3 border border-neutral-200/60 shadow-card"
                     >
                         <p class="text-2xs sm:text-xs text-neutral-500">
-                            Выручка
+                            Сумма загруженных
                         </p>
                         <p
                             class="text-base sm:text-lg font-display font-semibold text-mint"
                         >
-                            {new Intl.NumberFormat("ru-RU").format(
-                                totalRevenue,
-                            )} ₽
+                            {fmtCurrency(totalRevenue)}
                         </p>
                     </div>
                 </div>

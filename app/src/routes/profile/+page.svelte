@@ -14,12 +14,22 @@
     let success = $state("");
 
     async function load() {
-        const { data } = await supabase
+        await auth.waitForInit();
+        if (!auth.session?.user?.id) {
+            error =
+                auth.error || "Сессия не найдена. Войдите заново, чтобы открыть профиль.";
+            loading = false;
+            return;
+        }
+
+        const { data, error: err } = await supabase
             .from("profiles")
             .select("full_name, phone")
-            .eq("id", auth.session?.user?.id)
+            .eq("id", auth.session.user.id)
             .single();
-        if (data) {
+        if (err) {
+            error = err.message;
+        } else if (data) {
             fullName = data.full_name || "";
             phone = data.phone || "";
         }
@@ -32,13 +42,24 @@
         error = "";
         success = "";
 
-        const { error: err } = await supabase
+        await auth.waitForInit();
+        if (!auth.session?.user?.id) {
+            error = "Сессия не найдена. Войдите заново, чтобы сохранить профиль.";
+            saving = false;
+            return;
+        }
+
+        const { data, error: err } = await supabase
             .from("profiles")
             .update({ full_name: fullName, phone: phone || null })
-            .eq("id", auth.session?.user?.id);
+            .eq("id", auth.session.user.id)
+            .select("id");
 
         if (err) {
             error = err.message;
+        } else if (!data || data.length === 0) {
+            error =
+                "Профиль не найден — изменения не сохранены. Обновите страницу или войдите заново.";
         } else {
             success = "Сохранено";
             setTimeout(() => (success = ""), 2000);

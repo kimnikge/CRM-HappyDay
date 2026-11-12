@@ -59,29 +59,29 @@ function fullOrder(overrides: Record<string, unknown> = {}) {
 
 // ---- Tests ----
 describe("generateOrderPDF", () => {
-	it("returns a Blob", () => {
-		const blob = generateOrderPDF(minimalOrder());
+	it("returns a Blob", async () => {
+		const blob = await generateOrderPDF(minimalOrder());
 		expect(blob).toBeInstanceOf(Blob);
 	});
 
-	it("returns PDF mime type", () => {
-		const blob = generateOrderPDF(minimalOrder());
+	it("returns PDF mime type", async () => {
+		const blob = await generateOrderPDF(minimalOrder());
 		expect(blob.type).toBe("application/pdf");
 	});
 
-	it("generates non-empty PDF for minimal order", () => {
-		const blob = generateOrderPDF(minimalOrder());
+	it("generates non-empty PDF for minimal order", async () => {
+		const blob = await generateOrderPDF(minimalOrder());
 		expect(blob.size).toBeGreaterThan(1000); // at least 1KB
 	});
-
-	it("generates larger PDF for full order", () => {
-		const minimal = generateOrderPDF(minimalOrder());
-		const full = generateOrderPDF(fullOrder());
+ 
+	it("generates larger PDF for full order", async () => {
+		const minimal = await generateOrderPDF(minimalOrder());
+		const full = await generateOrderPDF(fullOrder());
 		expect(full.size).toBeGreaterThan(minimal.size);
 	});
 
-	it("handles empty/null optional fields gracefully", () => {
-		const blob = generateOrderPDF(
+	it("handles empty/null optional fields gracefully", async () => {
+		const blob = await generateOrderPDF(
 			minimalOrder({
 				contact_person: null,
 				phone: null,
@@ -94,43 +94,43 @@ describe("generateOrderPDF", () => {
 		expect(blob.size).toBeGreaterThan(1000);
 	});
 
-	it("handles special characters in company name", () => {
-		const blob = generateOrderPDF(
+	it("handles special characters in company name", async () => {
+		const blob = await generateOrderPDF(
 			minimalOrder({ company_name: 'ООО "Ромашка" & Партнёры' }),
 		);
 		expect(blob).toBeInstanceOf(Blob);
 	});
 
-	it("handles missing statuses and profiles", () => {
-		const blob = generateOrderPDF(
+	it("handles missing statuses and profiles", async () => {
+		const blob = await generateOrderPDF(
 			fullOrder({ statuses: null, profiles: null }),
 		);
 		expect(blob).toBeInstanceOf(Blob);
 	});
 
-	it("includes cancel_reason when present", () => {
-		const withCancel = generateOrderPDF(
+	it("includes cancel_reason when present", async () => {
+		const withCancel = await generateOrderPDF(
 			fullOrder({ cancel_reason: "Клиент передумал" }),
 		);
-		const withoutCancel = generateOrderPDF(fullOrder());
+		const withoutCancel = await generateOrderPDF(fullOrder());
 		expect(withCancel.size).toBeGreaterThan(withoutCancel.size);
 	});
 
-	it("generates consistent PDFs (deterministic)", () => {
-		const a = generateOrderPDF(fullOrder());
-		const b = generateOrderPDF(fullOrder());
+	it("generates consistent PDFs (deterministic)", async () => {
+		const a = await generateOrderPDF(fullOrder());
+		const b = await generateOrderPDF(fullOrder());
 		expect(a.size).toBe(b.size);
 	});
 
-	it("handles tables_info as plain string (legacy)", () => {
-		const blob = generateOrderPDF(
+	it("handles tables_info as plain string (legacy)", async () => {
+		const blob = await generateOrderPDF(
 			fullOrder({ tables_info: "круглые столы, 5 шт" }),
 		);
 		expect(blob).toBeInstanceOf(Blob);
 	});
 
-	it("handles tables_info as JSON with only some fields", () => {
-		const blob = generateOrderPDF(
+	it("handles tables_info as JSON with only some fields", async () => {
+		const blob = await generateOrderPDF(
 			fullOrder({ tables_info: '{"c":3}' }),
 		);
 		expect(blob).toBeInstanceOf(Blob);
